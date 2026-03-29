@@ -1,0 +1,134 @@
+╔══════════════════════════════════════════════════════════════════════════╗
+║                    AMIS DATA SOURCES - QUICK SUMMARY                     ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+DATABASE TABLES: 21 Total
+├── ✅ ACTIVELY USED & POPULATED: 2 tables
+│   ├── historical_demand_data (156 records)
+│   └── market_context_data (1 record)
+│
+└── ⚠️  DEFINED BUT NOT USED: 19 tables
+    ├── products
+    ├── inventory
+    ├── inventory_history
+    ├── machines
+    ├── product_machines
+    ├── machine_alarms
+    ├── spare_parts
+    ├── maintenance_history
+    ├── work_orders
+    ├── production_lines
+    ├── production_schedule
+    ├── machine_oee_history
+    ├── suppliers
+    ├── supplier_certifications
+    ├── supplier_contracts
+    ├── supplier_incidents
+    ├── bom_items
+    ├── activity_log
+    └── demand_forecasts (OUTPUT only)
+
+PYTHON FUNCTIONS (sample_data.py): 20 Total
+└── ✅ ALL ACTIVELY USED: 20 functions
+    ├── ✅ MIGRATED TO DATABASE (2):
+    │   ├── get_historical_demand() → historical_demand_data table
+    │   └── get_market_context() → market_context_data table
+    │
+    └── ❌ STILL IN PYTHON (18):
+        ├── get_current_inventory()
+        ├── get_warehouse_details()
+        ├── get_supplier_performance()
+        ├── get_historical_stockouts()
+        ├── get_reorder_history()
+        ├── get_product_info()
+        ├── get_production_capacity()
+        ├── get_machine_fleet()
+        ├── get_sensor_readings()
+        ├── get_maintenance_history()
+        ├── get_oee_history()
+        ├── get_production_lines()
+        ├── get_bill_of_materials()
+        ├── get_production_history()
+        ├── get_shift_configuration()
+        ├── get_open_purchase_orders()
+        ├── get_supplier_contracts()
+        └── get_supply_chain_risk_factors()
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║                      MIGRATION STATUS BY AGENT                           ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+📊 Demand Forecasting Agent: 40% (2/5 migrated)
+   ✅ Historical Demand → DATABASE
+   ✅ Market Context → DATABASE
+   ❌ Current Inventory → Python
+   ❌ Production Capacity → Python
+   ❌ Product Info → Python
+
+📦 Inventory Management Agent: 0% (0/6 migrated)
+   ❌ Current Inventory → Python
+   ❌ Warehouse Details → Python
+   ❌ Supplier Performance → Python
+   ❌ Stockout History → Python
+   ❌ Reorder History → Python
+   ❌ Product Info → Python
+
+🔧 Machine Health Agent: 0% (0/4 migrated)
+   ❌ Machine Fleet → Python
+   ❌ Sensor Readings → Python
+   ❌ Maintenance History → Python
+   ❌ OEE History → Python
+
+🏭 Production Planning Agent: 0% (0/4 migrated)
+   ❌ Production Lines → Python
+   ❌ Bill of Materials → Python
+   ❌ Production History → Python
+   ❌ Shift Configuration → Python
+
+📋 Supplier Coordination Agent: 0% (0/3 migrated)
+   ❌ Open Purchase Orders → Python
+   ❌ Supplier Contracts → Python
+   ❌ Supply Chain Risk → Python
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║                         OVERALL STATISTICS                               ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+Total Data Sources:        22
+Migrated to Database:      2 (9%)
+Still in Python:           20 (91%)
+
+Database Tables Defined:   21
+Database Tables Used:      2 (10%)
+Database Tables Empty:     19 (90%)
+
+Python Functions:          20
+Python Functions Used:     20 (100%)
+Python Functions Migrated: 2 (10%)
+
+╔══════════════════════════════════════════════════════════════════════════╗
+║                    KEY TAKEAWAY FOR YOUR QUESTION                        ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+YOU ASKED: "Which is correct - Demand doc says inventory is in database,
+            but Inventory doc says it's from sample_data.py?"
+
+ANSWER: The INVENTORY MANAGEMENT document is CORRECT.
+
+✅ CORRECT (Inventory Management doc):
+   "Current Inventory (from sample_data.py)"
+   "Python Function Call: inventory = get_current_inventory(product_id)"
+
+❌ WRONG (Demand Intelligence doc):
+   "SQL Query: SELECT * FROM inventory WHERE product_id = 'PROD-A';"
+
+REASON: We only migrated 2 data sources to database:
+   1. historical_demand_data (52 weeks of demand)
+   2. market_context_data (market conditions)
+
+   We did NOT migrate inventory data yet. It still comes from
+   get_current_inventory() Python function in sample_data.py.
+
+THE FIX: Update Demand Intelligence doc to say:
+   "Current Inventory (from sample_data.py)"
+   Not from database!
