@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import Layout from './components/Layout'
+import ProtectedRoute from './components/ProtectedRoute'
 import Dashboard from './pages/Dashboard'
 import Pipeline from './pages/Pipeline'
 import DemandIntelligence from './pages/DemandIntelligence'
@@ -19,19 +20,19 @@ function App() {
     <Router>
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/" element={<Layout><Dashboard /></Layout>} />
-        <Route path="/dashboard" element={<Layout><Dashboard /></Layout>} />
-        <Route path="/pipeline" element={<Layout><Pipeline /></Layout>} />
-        <Route path="/demand" element={<Layout><DemandIntelligence /></Layout>} />
-        <Route path="/inventory" element={<Layout><InventoryControl /></Layout>} />
-        <Route path="/machines" element={<Layout><MachineHealth /></Layout>} />
-        <Route path="/production" element={<Layout><ProductionPlanning /></Layout>} />
-        <Route path="/suppliers" element={<Layout><SupplierManagement /></Layout>} />
-        <Route path="/negotiation" element={<Layout><Negotiation /></Layout>} />
-        <Route path="/chat" element={<Layout><Chat /></Layout>} />
-        <Route path="/integrations" element={<Layout><Integrations /></Layout>} />
-        <Route path="/audit" element={<Layout><AuditLog /></Layout>} />
-        <Route path="/scenarios" element={<Layout><ScenarioPlanner /></Layout>} />
+        <Route path="/" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
+        <Route path="/dashboard" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
+        <Route path="/pipeline" element={<ProtectedRoute><Layout><Pipeline /></Layout></ProtectedRoute>} />
+        <Route path="/demand" element={<ProtectedRoute><Layout><DemandIntelligence /></Layout></ProtectedRoute>} />
+        <Route path="/inventory" element={<ProtectedRoute><Layout><InventoryControl /></Layout></ProtectedRoute>} />
+        <Route path="/machines" element={<ProtectedRoute><Layout><MachineHealth /></Layout></ProtectedRoute>} />
+        <Route path="/production" element={<ProtectedRoute><Layout><ProductionPlanning /></Layout></ProtectedRoute>} />
+        <Route path="/suppliers" element={<ProtectedRoute><Layout><SupplierManagement /></Layout></ProtectedRoute>} />
+        <Route path="/negotiation" element={<ProtectedRoute><Layout><Negotiation /></Layout></ProtectedRoute>} />
+        <Route path="/chat" element={<ProtectedRoute><Layout><Chat /></Layout></ProtectedRoute>} />
+        <Route path="/integrations" element={<ProtectedRoute><Layout><Integrations /></Layout></ProtectedRoute>} />
+        <Route path="/audit" element={<ProtectedRoute><Layout><AuditLog /></Layout></ProtectedRoute>} />
+        <Route path="/scenarios" element={<ProtectedRoute><Layout><ScenarioPlanner /></Layout></ProtectedRoute>} />
       </Routes>
     </Router>
   )
