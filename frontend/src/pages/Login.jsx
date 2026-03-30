@@ -22,7 +22,7 @@ export default function Login() {
       formData.append('password', password)
 
       console.log('Sending login request...')
-      const response = await fetch('http://localhost:8000/api/auth/login', {
+      const response = await fetch('/api/auth/login', {
         method: 'POST',
         body: formData,
       })
@@ -43,7 +43,7 @@ export default function Login() {
 
       // Fetch user info
       console.log('Fetching user info...')
-      const userResponse = await fetch('http://localhost:8000/api/auth/me', {
+      const userResponse = await fetch('/api/auth/me', {
         headers: { 'Authorization': `Bearer ${data.access_token}` }
       })
 

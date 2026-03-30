@@ -72,7 +72,7 @@ export default function Negotiation() {
     setTimeout(() => setCurrentRound(3), 5000);
 
     try {
-      const response = await fetch('http://localhost:8000/api/negotiation/run', {
+      const response = await fetch('/api/negotiation/run', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
