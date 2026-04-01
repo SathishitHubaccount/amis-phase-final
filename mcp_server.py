@@ -6,8 +6,13 @@ live plant data directly during Ask AMIS conversations.
 
 import sqlite3
 import os
+import sys
 import json
 from mcp.server.fastmcp import FastMCP
+
+# Redirect stdout warnings/prints to stderr so they don't corrupt the stdio JSON-RPC stream
+import warnings
+warnings.filterwarnings("ignore")
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "backend", "amis.db")
 
@@ -244,4 +249,4 @@ def get_system_health_summary() -> str:
 
 
 if __name__ == "__main__":
-    mcp.run()
+    mcp.run(transport="stdio")
