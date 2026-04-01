@@ -429,7 +429,15 @@ def get_warehouse_details(product_id: str = "PROD-A") -> Dict:
     conn.close()
 
     if not rows:
-        return {}
+        return {
+            "product_id": product_id,
+            "warehouse_id": "WH-MAIN",
+            "total_capacity_units": 5000,
+            "zones": [],
+            "total_current_units": 0,
+            "total_utilization_pct": 0,
+            "cost_per_zone_per_unit_per_day": {"A": 0.08, "B": 0.12, "C": 0.06},
+        }
 
     zones = []
     zone_names = {"ZONE-A": "Primary Storage", "ZONE-B": "Fast-Pick Area", "ZONE-C": "Overflow / Seasonal"}
