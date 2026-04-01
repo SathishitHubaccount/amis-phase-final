@@ -490,7 +490,8 @@ async def get_dashboard_summary():
 
     # Get all machines to calculate OEE and identify critical ones
     machines = get_all_machines()
-    total_oee = sum(m['oee'] for m in machines) / len(machines) * 100 if machines else 0
+    raw_oee = sum(m['oee'] for m in machines) / len(machines) if machines else 0
+    total_oee = round(raw_oee * 100 if raw_oee <= 1 else raw_oee, 1)
     critical_machines = [m['id'] for m in machines if m.get('failure_risk', 0) * 100 > 40]
     machines_status = "critical" if len(critical_machines) > 2 else "at_risk" if len(critical_machines) > 0 else "healthy"
 
@@ -545,7 +546,7 @@ async def get_dashboard_summary():
         'production': production_attainment,
         'oee': total_oee  # Already converted to 0-100 percentage above
     }
-    system_health = round(sum(health_scores.values()) / len(health_scores))
+    system_health = min(100, round(sum(health_scores.values()) / len(health_scores)))
     overall_status = "critical" if system_health < 60 else "at_risk" if system_health < 80 else "healthy"
 
     # Build alerts from real data
