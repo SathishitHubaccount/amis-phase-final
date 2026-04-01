@@ -149,11 +149,11 @@ def get_supplier_status() -> str:
     conn = _db()
     cur = conn.cursor()
     cur.execute("""
-        SELECT s.id, s.name, s.category, s.status,
-               s.quality_score, s.delivery_score, s.overall_score,
-               s.lead_time_days, s.payment_terms
+        SELECT s.id, s.name, s.location,
+               s.quality_score, s.on_time_delivery, s.score,
+               s.lead_time, s.payment_terms, s.risk, s.rating
         FROM suppliers s
-        ORDER BY s.overall_score DESC
+        ORDER BY s.score DESC
     """)
     suppliers = [dict(r) for r in cur.fetchall()]
 
