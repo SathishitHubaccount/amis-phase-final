@@ -110,9 +110,14 @@ export default function Chat() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: userMessage }),
       })
-      const data = await res.json()
 
-      if (!res.ok) throw new Error(data.detail || 'Request failed')
+      if (!res.ok) {
+        let detail = 'Request failed'
+        try { detail = (await res.json()).detail || detail } catch (_) {}
+        throw new Error(detail)
+      }
+
+      const data = await res.json()
 
       setMessages(prev => prev.map(m =>
         m.id === pendingId
