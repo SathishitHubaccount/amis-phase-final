@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Lock, User, AlertCircle } from 'lucide-react'
+import { Lock, User, AlertCircle, Eye, EyeOff } from 'lucide-react'
 
 export default function Login() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
@@ -15,49 +16,33 @@ export default function Login() {
     setLoading(true)
 
     try {
-      console.log('Attempting login with username:', username)
-
       const formData = new FormData()
       formData.append('username', username)
       formData.append('password', password)
 
-      console.log('Sending login request...')
-      const response = await fetch('http://localhost:8000/api/auth/login', {
+      const response = await fetch('/api/auth/login', {
         method: 'POST',
         body: formData,
       })
 
-      console.log('Login response status:', response.status)
-
       if (!response.ok) {
-        const errorText = await response.text()
-        console.error('Login failed:', errorText)
         throw new Error('Invalid credentials')
       }
 
       const data = await response.json()
-      console.log('Login successful, token received')
-
-      // Store token
       localStorage.setItem('access_token', data.access_token)
 
-      // Fetch user info
-      console.log('Fetching user info...')
-      const userResponse = await fetch('http://localhost:8000/api/auth/me', {
+      const userResponse = await fetch('/api/auth/me', {
         headers: { 'Authorization': `Bearer ${data.access_token}` }
       })
 
       if (userResponse.ok) {
         const userData = await userResponse.json()
-        console.log('User data received:', userData)
         localStorage.setItem('user', JSON.stringify(userData))
       }
 
-      console.log('Navigating to dashboard...')
-      // Redirect to dashboard
       navigate('/dashboard')
     } catch (err) {
-      console.error('Login error:', err)
       setError('Invalid username or password')
     } finally {
       setLoading(false)
@@ -107,13 +92,20 @@ export default function Login() {
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full pl-10 pr-12 py-3 border border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 placeholder="Enter password"
                 required
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(v => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200"
+              >
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
             </div>
           </div>
 
