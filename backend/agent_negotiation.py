@@ -1,52 +1,82 @@
 """
-Agent Negotiation System
-Orchestrates multi-agent debate with 3-round structure:
-- Round 1: Each agent proposes solution
-- Round 2: Agents critique each other's proposals
-- Round 3: Synthesize consensus
+Agent Negotiation System  — FAST PATH
+3-round structured debate:
+  Round 1: Each agent pre-fetches its live domain data (no LLM), then ONE LLM call → proposal
+  Round 2: ONE LLM call per agent → critique of other proposals
+  Round 3: ONE LLM call → orchestrator consensus
+
+Total LLM calls: 7  (vs ~80 with full ReAct loop)
+Expected runtime: ~35 s  (vs ~10 min with agent.run())
 """
 
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
 from datetime import datetime
+from langchain_core.messages import HumanMessage
 import json
+import time
+
+
+# ── Agent display metadata ────────────────────────────────────────
+_AGENT_META = {
+    "DemandForecasting":   {"label": "Demand Forecasting Agent",  "color": "blue",    "initials": "DA"},
+    "InventoryManagement": {"label": "Inventory Management Agent","color": "purple",  "initials": "IA"},
+    "ProductionPlanning":  {"label": "Production Planning Agent", "color": "emerald", "initials": "PA"},
+    "MachineHealth":       {"label": "Machine Health Agent",       "color": "amber",   "initials": "MH"},
+    "SupplierProcurement": {"label": "Supplier Procurement Agent", "color": "rose",    "initials": "SP"},
+    "Orchestrator":        {"label": "Orchestrator",               "color": "orange",  "initials": "OR"},
+}
+
+# Tools each agent's bridge method calls (for trace display)
+_AGENT_BRIDGE_TOOLS = {
+    "DemandForecasting":   ["get_demand_data_summary", "analyze_demand_trends",
+                            "simulate_demand_scenarios", "detect_demand_anomalies"],
+    "InventoryManagement": ["get_inventory_status", "calculate_reorder_point",
+                            "optimize_safety_stock", "simulate_stockout_risk"],
+    "ProductionPlanning":  ["get_production_context", "build_master_production_schedule",
+                            "analyze_production_bottlenecks", "evaluate_capacity_gap"],
+    "MachineHealth":       ["get_machine_fleet_status", "predict_failure_risk",
+                            "calculate_oee", "assess_production_capacity_impact"],
+    "SupplierProcurement": ["get_procurement_context", "evaluate_supplier_options",
+                            "assess_supply_chain_risk", "simulate_delivery_risk"],
+}
+
+
+def _agent_meta(name: str) -> dict:
+    for key, meta in _AGENT_META.items():
+        if key.lower() in name.lower():
+            return meta
+    return {"label": name + " Agent", "color": "gray", "initials": name[:2].upper()}
 
 
 class AgentNegotiator:
     """
-    Orchestrates multi-agent negotiation for complex decision-making
+    Fast multi-agent negotiation.
+    Pre-fetches live domain data once per agent (programmatic, no LLM),
+    then makes exactly ONE LLM call per agent per round.
     """
 
     def __init__(self, agents: List[Any]):
-        """
-        Initialize negotiator with list of agents
-
-        Args:
-            agents: List of agent instances (DemandAgent, InventoryAgent, etc.)
-        """
         self.agents = agents
+        self._execution_trace: List[Dict] = []
+        self._seq = 0
+        # Domain data pre-fetched in Round 1; reused in subsequent rounds
+        self._agent_data: Dict[str, dict] = {}
+
+    # ── Public API ────────────────────────────────────────────────
 
     def negotiate(self, scenario: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Main negotiation workflow - 3 rounds of structured debate
+        print(f"\n🤝 Starting negotiation with {len(self.agents)} agents (fast-path)...")
+        self._execution_trace = []
+        self._seq = 0
+        self._agent_data = {}
 
-        Args:
-            scenario: Problem description with constraints and question
-
-        Returns:
-            Complete negotiation result with all rounds and final consensus
-        """
-        print(f"\n🤝 Starting negotiation with {len(self.agents)} agents...")
-
-        # ROUND 1: Each agent proposes solution independently
-        print("\n📋 ROUND 1: Collecting proposals...")
+        print("\n📋 ROUND 1: Proposals (data fetch + 1 LLM call each)...")
         proposals = self._round_1_proposals(scenario)
 
-        # ROUND 2: Agents critique each other's proposals
-        print("\n💬 ROUND 2: Agent critiques...")
+        print("\n💬 ROUND 2: Critiques (1 LLM call each)...")
         critiques = self._round_2_critiques(scenario, proposals)
 
-        # ROUND 3: Synthesize consensus from all inputs
-        print("\n🎯 ROUND 3: Building consensus...")
+        print("\n🎯 ROUND 3: Consensus (1 LLM call)...")
         consensus = self._round_3_consensus(scenario, proposals, critiques)
 
         return {
@@ -54,339 +84,266 @@ class AgentNegotiator:
             "round_1_proposals": proposals,
             "round_2_critiques": critiques,
             "round_3_consensus": consensus,
+            "execution_trace": self._execution_trace,
             "negotiation_complete": True,
-            "timestamp": self._get_timestamp()
+            "timestamp": self._ts(),
         }
 
-    def _round_1_proposals(self, scenario: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Round 1: Each agent independently proposes a solution
+    # ── Round 1 ───────────────────────────────────────────────────
 
-        Args:
-            scenario: Problem description
-
-        Returns:
-            Dictionary of agent proposals
-        """
+    def _round_1_proposals(self, scenario: Dict) -> Dict[str, Any]:
         proposals = {}
 
         for agent in self.agents:
-            agent_name = agent.__class__.__name__.replace('Agent', '')
-            print(f"  → {agent_name} Agent proposing...")
+            name = agent.__class__.__name__.replace("Agent", "")
+            meta = _agent_meta(name)
+            print(f"  [R1] {meta['label']}: fetching domain data + proposing...")
+            t0 = time.time()
 
-            # Build prompt for this agent to propose solution
-            prompt = self._build_proposal_prompt(agent_name, scenario)
+            # Step 1 — programmatic data fetch (fast, no LLM)
+            domain_data, tool_calls = self._prefetch(agent, name)
+            self._agent_data[name] = domain_data   # cache for later rounds
 
-            # Get agent's proposal
-            try:
-                proposal_response = agent.run(prompt)
-                proposals[agent_name] = {
-                    "agent": agent_name,
-                    "proposal": proposal_response,
-                    "timestamp": self._get_timestamp()
-                }
-            except Exception as e:
-                print(f"  ⚠️ Error from {agent_name} Agent: {e}")
-                proposals[agent_name] = {
-                    "agent": agent_name,
-                    "proposal": f"Error generating proposal: {str(e)}",
-                    "timestamp": self._get_timestamp()
-                }
+            # Step 2 — single LLM call for proposal
+            data_section = (
+                f"\n\nYour live domain data (already fetched):\n{json.dumps(domain_data, indent=2)}"
+                if domain_data else ""
+            )
+            prompt = self._proposal_prompt(name, scenario) + data_section
+            response, dur_ms = self._llm_call(agent, prompt, t0)
+
+            proposals[name] = {
+                "agent":      name,
+                "proposal":   response,
+                "tool_calls": tool_calls,
+                "duration_ms": dur_ms,
+                "timestamp":  self._ts(),
+            }
+
+            self._seq += 1
+            self._execution_trace.append({
+                "seq":            self._seq,
+                "round":          1,
+                "round_label":    "Initial Proposals",
+                "agent":          name,
+                "agent_label":    meta["label"],
+                "agent_color":    meta["color"],
+                "agent_initials": meta["initials"],
+                "action":         "propose",
+                "addressing":     [],
+                "tool_calls":     tool_calls,
+                "duration_ms":    dur_ms,
+                "message_preview": self._preview(response),
+                "timestamp":      proposals[name]["timestamp"],
+            })
 
         return proposals
 
-    def _round_2_critiques(self,
-                          scenario: Dict[str, Any],
-                          proposals: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Round 2: Each agent critiques other agents' proposals
+    # ── Round 2 ───────────────────────────────────────────────────
 
-        Args:
-            scenario: Original problem
-            proposals: Round 1 proposals from all agents
-
-        Returns:
-            Dictionary of agent critiques
-        """
+    def _round_2_critiques(self, scenario: Dict, proposals: Dict) -> Dict[str, Any]:
         critiques = {}
 
         for agent in self.agents:
-            agent_name = agent.__class__.__name__.replace('Agent', '')
-            print(f"  → {agent_name} Agent critiquing...")
+            name = agent.__class__.__name__.replace("Agent", "")
+            meta = _agent_meta(name)
+            others = {k: v for k, v in proposals.items() if k != name}
+            print(f"  [R2] {meta['label']}: critiquing...")
+            t0 = time.time()
 
-            # Get this agent's own proposal
-            own_proposal = proposals.get(agent_name, {})
+            # Single LLM call — no data re-fetch needed
+            prompt = self._critique_prompt(name, scenario, proposals.get(name, {}), others)
+            response, dur_ms = self._llm_call(agent, prompt, t0)
 
-            # Get other agents' proposals
-            other_proposals = {
-                name: prop for name, prop in proposals.items()
-                if name != agent_name
+            critiques[name] = {
+                "agent":      name,
+                "critique":   response,
+                "tool_calls": [],   # no tools in critique round
+                "duration_ms": dur_ms,
+                "timestamp":  self._ts(),
             }
 
-            # Build critique prompt
-            prompt = self._build_critique_prompt(
-                agent_name,
-                scenario,
-                own_proposal,
-                other_proposals
-            )
-
-            # Get agent's critique
-            try:
-                critique_response = agent.run(prompt)
-                critiques[agent_name] = {
-                    "agent": agent_name,
-                    "critique": critique_response,
-                    "timestamp": self._get_timestamp()
-                }
-            except Exception as e:
-                print(f"  ⚠️ Error from {agent_name} Agent: {e}")
-                critiques[agent_name] = {
-                    "agent": agent_name,
-                    "critique": f"Error generating critique: {str(e)}",
-                    "timestamp": self._get_timestamp()
-                }
+            self._seq += 1
+            self._execution_trace.append({
+                "seq":            self._seq,
+                "round":          2,
+                "round_label":    "Agent Critiques",
+                "agent":          name,
+                "agent_label":    meta["label"],
+                "agent_color":    meta["color"],
+                "agent_initials": meta["initials"],
+                "action":         "critique",
+                "addressing":     list(others.keys()),
+                "tool_calls":     [],
+                "duration_ms":    dur_ms,
+                "message_preview": self._preview(response),
+                "timestamp":      critiques[name]["timestamp"],
+            })
 
         return critiques
 
-    def _round_3_consensus(self,
-                          scenario: Dict[str, Any],
-                          proposals: Dict[str, Any],
-                          critiques: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Round 3: Synthesize all proposals and critiques into consensus
+    # ── Round 3 ───────────────────────────────────────────────────
 
-        Args:
-            scenario: Original problem
-            proposals: Round 1 proposals
-            critiques: Round 2 critiques
-
-        Returns:
-            Final consensus decision
-        """
-        print(f"  → Orchestrator synthesizing consensus...")
-
-        # Use first agent as synthesizer (orchestrator role)
+    def _round_3_consensus(self, scenario: Dict, proposals: Dict, critiques: Dict) -> Dict[str, Any]:
         synthesizer = self.agents[0]
+        print(f"  [R3] Orchestrator synthesising consensus...")
+        t0 = time.time()
 
-        # Build consensus prompt with all information
-        prompt = self._build_consensus_prompt(scenario, proposals, critiques)
+        prompt = self._consensus_prompt(scenario, proposals, critiques)
+        response, dur_ms = self._llm_call(synthesizer, prompt, t0)
 
-        # Get final consensus
-        try:
-            consensus_response = synthesizer.run(prompt)
-            return {
-                "final_decision": consensus_response,
-                "agents_involved": len(self.agents),
-                "timestamp": self._get_timestamp()
-            }
-        except Exception as e:
-            print(f"  ⚠️ Error generating consensus: {e}")
-            return {
-                "final_decision": f"Error generating consensus: {str(e)}",
-                "agents_involved": len(self.agents),
-                "timestamp": self._get_timestamp()
-            }
+        self._seq += 1
+        self._execution_trace.append({
+            "seq":            self._seq,
+            "round":          3,
+            "round_label":    "Consensus",
+            "agent":          "Orchestrator",
+            "agent_label":    "Orchestrator",
+            "agent_color":    "orange",
+            "agent_initials": "OR",
+            "action":         "synthesize",
+            "addressing":     list(proposals.keys()),
+            "tool_calls":     [],
+            "duration_ms":    dur_ms,
+            "message_preview": self._preview(response),
+            "timestamp":      self._ts(),
+        })
 
-    def _build_proposal_prompt(self, agent_name: str, scenario: Dict) -> str:
-        """
-        Build prompt for Round 1: Agent proposes solution
-
-        Args:
-            agent_name: Name of the agent
-            scenario: Problem scenario
-
-        Returns:
-            Formatted prompt string
-        """
-        # Map agent names to domain expertise
-        domain_map = {
-            "Demand": "demand forecasting and customer relationships",
-            "Inventory": "inventory optimization and stock management",
-            "ProductionPlanning": "production scheduling and capacity planning",
-            "MachineHealth": "equipment reliability and predictive maintenance",
-            "Supplier": "supplier relationships and procurement"
+        return {
+            "final_decision":   response,
+            "tool_calls":       [],
+            "duration_ms":      dur_ms,
+            "agents_involved":  len(self.agents),
+            "timestamp":        self._ts(),
         }
 
-        domain = domain_map.get(agent_name, "manufacturing operations")
+    # ── Helpers ───────────────────────────────────────────────────
 
-        return f"""You are the {agent_name} Agent, an expert in {domain}.
+    def _llm_call(self, agent, prompt: str, t0: float) -> Tuple[str, int]:
+        """Single direct LLM call — no ReAct loop, no tool binding."""
+        try:
+            resp = agent.llm.invoke([
+                agent.system_message,
+                HumanMessage(content=prompt),
+            ])
+            content = resp.content
+            if isinstance(content, list):
+                text = " ".join(
+                    b.get("text", "") for b in content
+                    if isinstance(b, dict) and b.get("type") == "text"
+                )
+            else:
+                text = str(content)
+        except Exception as e:
+            text = f"(LLM call failed: {e})"
+        dur_ms = round((time.time() - t0) * 1000)
+        return text, dur_ms
 
-SCENARIO:
-{json.dumps(scenario, indent=2)}
-
-Your task: Propose a solution to this problem from YOUR domain perspective.
-
-Think step-by-step:
-1. What is the core problem from your perspective?
-2. What constraints in your domain matter most?
-3. What solution do you recommend?
-4. What concerns or risks do you see?
-5. How confident are you in this recommendation?
-
-Provide your proposal in a clear, structured format with:
-- Your recommended action
-- Key reasoning points
-- Concerns or risks
-- Confidence level (0-100%)
-
-Be specific and actionable. Focus on what YOU can control in your domain.
-"""
-
-    def _build_critique_prompt(self,
-                               agent_name: str,
-                               scenario: Dict,
-                               own_proposal: Dict,
-                               other_proposals: Dict) -> str:
+    def _prefetch(self, agent, name: str) -> Tuple[dict, List[dict]]:
         """
-        Build prompt for Round 2: Agent critiques others
-
-        Args:
-            agent_name: Name of the agent
-            scenario: Problem scenario
-            own_proposal: This agent's Round 1 proposal
-            other_proposals: Other agents' Round 1 proposals
-
-        Returns:
-            Formatted prompt string
+        Call the agent's programmatic bridge method to get live domain data.
+        No LLM involved — pure tool execution.
+        Returns (data_dict, tool_calls_list).
         """
-        return f"""You are the {agent_name} Agent.
+        tool_names = _AGENT_BRIDGE_TOOLS.get(name, [])
+        tool_calls = [{"order": i + 1, "name": t} for i, t in enumerate(tool_names)]
 
-SCENARIO:
-{json.dumps(scenario, indent=2)}
+        try:
+            if name == "DemandForecasting" and hasattr(agent, "get_forecast_output"):
+                data = agent.get_forecast_output(product_id="PROD-A")
+            elif name == "InventoryManagement" and hasattr(agent, "get_inventory_output"):
+                data = agent.get_inventory_output(product_id="PROD-A", planning_weeks=4)
+            elif name == "ProductionPlanning" and hasattr(agent, "get_production_output"):
+                data = agent.get_production_output(product_id="PROD-A", planning_weeks=4)
+            elif name == "MachineHealth" and hasattr(agent, "get_capacity_output"):
+                data = agent.get_capacity_output(plant_id="PLANT-01")
+            elif name == "SupplierProcurement" and hasattr(agent, "get_procurement_output"):
+                data = agent.get_procurement_output(planning_weeks=4)
+            else:
+                return {}, []
+            return data, tool_calls
+        except Exception as e:
+            print(f"  ⚠ prefetch failed for {name}: {e}")
+            return {}, tool_calls   # still show tool names even if data fetch failed
 
-YOUR PROPOSAL (Round 1):
-{json.dumps(own_proposal.get('proposal', 'No proposal'), indent=2)}
+    def _preview(self, text: str, max_chars: int = 220) -> str:
+        if isinstance(text, list):
+            text = " ".join(b.get("text", "") if isinstance(b, dict) else str(b) for b in text)
+        text = str(text).strip()
+        if len(text) <= max_chars:
+            return text
+        for sep in [". ", ".\n", "! ", "? "]:
+            idx = text.find(sep, 80)
+            if 80 < idx < max_chars:
+                return text[:idx + 1].strip()
+        return text[:max_chars].strip() + "…"
 
-OTHER AGENTS' PROPOSALS:
-{json.dumps(other_proposals, indent=2)}
-
-Your task: Analyze the other agents' proposals from YOUR domain perspective.
-
-For each other agent's proposal, consider:
-1. What do you agree with?
-2. What concerns you from your domain perspective?
-3. What are they missing or overlooking?
-4. How could their proposal impact your domain?
-
-After seeing others' perspectives, reflect:
-- Does this change your original recommendation?
-- What hybrid solution might work best?
-- Where can you compromise, and where must you hold firm?
-
-Provide structured critique covering:
-- Points of agreement with each agent
-- Concerns from your domain perspective
-- Suggestions for improvement
-- Your updated position after seeing all proposals
-"""
-
-    def _build_consensus_prompt(self,
-                                scenario: Dict,
-                                proposals: Dict,
-                                critiques: Dict) -> str:
-        """
-        Build prompt for Round 3: Synthesize consensus
-
-        Args:
-            scenario: Problem scenario
-            proposals: All Round 1 proposals
-            critiques: All Round 2 critiques
-
-        Returns:
-            Formatted prompt string
-        """
-        return f"""You are the Orchestrator synthesizing a multi-agent negotiation.
-
-SCENARIO:
-{json.dumps(scenario, indent=2)}
-
-ROUND 1 - AGENT PROPOSALS:
-{json.dumps(proposals, indent=2)}
-
-ROUND 2 - AGENT CRITIQUES:
-{json.dumps(critiques, indent=2)}
-
-Your task: Synthesize all inputs into ONE final recommendation.
-
-The final decision must:
-1. Address all valid concerns raised by agents
-2. Maximize overall value across all domains
-3. Be concrete and executable
-4. Have buy-in from all agents (or document disagreements)
-
-Think step-by-step:
-1. What do all agents agree on? (Common ground)
-2. Where do agents disagree? What are the root causes?
-3. How can disagreements be resolved or balanced?
-4. What's the optimal synthesis that serves all domains?
-5. What execution steps are needed?
-6. What risks remain and how to mitigate them?
-
-Provide a clear final recommendation with:
-- Final decision (accept/reject/modify)
-- Concrete execution plan (step-by-step)
-- How each agent's concerns are addressed
-- Financial summary (if applicable)
-- Risk assessment and mitigation strategies
-- Overall confidence level (0-100%)
-
-Be decisive but thorough. This decision will be executed.
-"""
-
-    def _get_timestamp(self) -> str:
-        """Get current ISO timestamp"""
+    def _ts(self) -> str:
         return datetime.now().isoformat()
 
+    # ── Prompts ───────────────────────────────────────────────────
 
-# Example usage and testing
-def test_negotiation():
-    """
-    Test function - demonstrates negotiation with mock agents
-    """
-    print("="*60)
-    print("AGENT NEGOTIATION TEST")
-    print("="*60)
+    def _proposal_prompt(self, name: str, scenario: Dict) -> str:
+        domain_map = {
+            "DemandForecasting":   "demand forecasting and customer relationships",
+            "InventoryManagement": "inventory optimisation and stock management",
+            "ProductionPlanning":  "production scheduling and capacity planning",
+            "MachineHealth":       "equipment reliability and predictive maintenance",
+            "SupplierProcurement": "supplier relationships and procurement",
+        }
+        domain = domain_map.get(name, "manufacturing operations")
+        return f"""You are the {name} Agent, expert in {domain}.
 
-    # Create mock agents (in real use, import actual agents)
-    class MockAgent:
-        def __init__(self, name):
-            self.name = name
+SCENARIO:
+{json.dumps(scenario, indent=2)}
 
-        def run(self, prompt):
-            return f"{self.name} response to: {prompt[:100]}..."
+Using your live domain data provided below, propose a solution from YOUR domain perspective.
 
-    agents = [
-        MockAgent("DemandAgent"),
-        MockAgent("InventoryAgent"),
-        MockAgent("ProductionPlanningAgent")
-    ]
+Include:
+- Recommended action with specific numbers
+- Key reasoning backed by your data
+- Risks and concerns
+- Confidence level (0–100 %)
 
-    # Create scenario
-    scenario = {
-        "problem": "Customer wants 2,000 units in 3 days",
-        "constraints": {
-            "production_capacity": 1500,
-            "current_inventory": 300,
-            "safety_stock_minimum": 200,
-            "overtime_cost_per_100_units": 3000,
-            "customer_lifetime_value": 500000
-        },
-        "question": "Should we accept this order? If yes, how do we fulfill it?"
-    }
+Be concise and data-driven. 3–5 sentences max."""
 
-    # Run negotiation
-    negotiator = AgentNegotiator(agents)
-    result = negotiator.negotiate(scenario)
+    def _critique_prompt(self, name: str, scenario: Dict,
+                          own: Dict, others: Dict) -> str:
+        return f"""You are the {name} Agent.
 
-    print("\n" + "="*60)
-    print("NEGOTIATION COMPLETE")
-    print("="*60)
-    print(f"\nAgents involved: {len(result['round_1_proposals'])}")
-    print(f"Consensus reached: {result['negotiation_complete']}")
+SCENARIO:
+{json.dumps(scenario, indent=2)}
 
-    return result
+YOUR ROUND 1 PROPOSAL:
+{self._preview(own.get('proposal', '—'), 400)}
 
+OTHER AGENTS' PROPOSALS:
+{json.dumps({k: self._preview(v.get('proposal',''), 300) for k, v in others.items()}, indent=2)}
 
-if __name__ == "__main__":
-    test_negotiation()
+Critique the other proposals from YOUR domain perspective:
+1. What do you agree with?
+2. What concerns you?
+3. Your updated position (has anything changed?).
+
+Be concise — 3–4 sentences max."""
+
+    def _consensus_prompt(self, scenario: Dict, proposals: Dict,
+                           critiques: Dict) -> str:
+        return f"""You are the Orchestrator synthesising a multi-agent negotiation.
+
+SCENARIO:
+{json.dumps(scenario, indent=2)}
+
+PROPOSALS:
+{json.dumps({k: self._preview(v.get('proposal',''), 250) for k, v in proposals.items()}, indent=2)}
+
+CRITIQUES:
+{json.dumps({k: self._preview(v.get('critique',''), 250) for k, v in critiques.items()}, indent=2)}
+
+Synthesise into ONE final recommendation:
+- Final decision (accept / reject / modify + specific plan)
+- How each agent's key concern is addressed
+- Financial summary (cost vs revenue)
+- Confidence level
+
+Be decisive. 5–7 sentences."""

@@ -23,10 +23,10 @@ export default function SupplierDetailModal({ isOpen, onClose, supplier }) {
         {/* Header Info */}
         <div className="flex items-start justify-between">
           <div>
-            <h3 className="text-2xl font-bold text-gray-900">{supplier.name}</h3>
+            <h3 className="text-2xl font-bold text-white">{supplier.name}</h3>
             <div className="flex items-center gap-2 mt-1">
-              <MapPin className="h-4 w-4 text-gray-500" />
-              <p className="text-sm text-gray-600">{supplier.location}</p>
+              <MapPin className="h-4 w-4 text-slate-500" />
+              <p className="text-sm text-slate-400">{supplier.location}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -64,37 +64,37 @@ export default function SupplierDetailModal({ isOpen, onClose, supplier }) {
 
         {/* Commercial Terms */}
         <div>
-          <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+          <h4 className="font-semibold text-white mb-3 flex items-center gap-2">
             <DollarSign className="h-5 w-5 text-green-600" />
             Commercial Terms
           </h4>
           <div className="grid grid-cols-2 gap-4">
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <p className="text-xs text-gray-600 mb-1">Base Cost</p>
-              <p className="text-lg font-bold text-gray-900">${supplier.baseCost}/unit</p>
+            <div className="p-3 bg-slate-800 rounded-lg">
+              <p className="text-xs text-slate-400 mb-1">Base Cost</p>
+              <p className="text-lg font-bold text-white">${supplier.baseCost}/unit</p>
             </div>
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <p className="text-xs text-gray-600 mb-1">MOQ</p>
-              <p className="text-lg font-bold text-gray-900">{supplier.moq.toLocaleString()} units</p>
+            <div className="p-3 bg-slate-800 rounded-lg">
+              <p className="text-xs text-slate-400 mb-1">MOQ</p>
+              <p className="text-lg font-bold text-white">{supplier.moq.toLocaleString()} units</p>
             </div>
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <p className="text-xs text-gray-600 mb-1">Lead Time</p>
-              <p className="text-lg font-bold text-gray-900">{supplier.leadTime} ± {supplier.leadTimeVariability} days</p>
+            <div className="p-3 bg-slate-800 rounded-lg">
+              <p className="text-xs text-slate-400 mb-1">Lead Time</p>
+              <p className="text-lg font-bold text-white">{supplier.leadTime} ± {supplier.leadTimeVariability} days</p>
             </div>
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <p className="text-xs text-gray-600 mb-1">Payment Terms</p>
-              <p className="text-lg font-bold text-gray-900">{supplier.paymentTerms}</p>
+            <div className="p-3 bg-slate-800 rounded-lg">
+              <p className="text-xs text-slate-400 mb-1">Payment Terms</p>
+              <p className="text-lg font-bold text-white">{supplier.paymentTerms}</p>
             </div>
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <p className="text-xs text-gray-600 mb-1">Currency</p>
-              <p className="text-lg font-bold text-gray-900">{supplier.currency}</p>
+            <div className="p-3 bg-slate-800 rounded-lg">
+              <p className="text-xs text-slate-400 mb-1">Currency</p>
+              <p className="text-lg font-bold text-white">{supplier.currency}</p>
             </div>
           </div>
         </div>
 
         {/* Certifications */}
         <div>
-          <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+          <h4 className="font-semibold text-white mb-3 flex items-center gap-2">
             <Award className="h-5 w-5 text-blue-600" />
             Certifications
           </h4>
@@ -110,29 +110,29 @@ export default function SupplierDetailModal({ isOpen, onClose, supplier }) {
         {/* Active Contracts */}
         {supplier.contracts && supplier.contracts.length > 0 && (
           <div>
-            <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+            <h4 className="font-semibold text-white mb-3 flex items-center gap-2">
               <FileText className="h-5 w-5 text-purple-600" />
               Active Contracts
             </h4>
             <div className="space-y-2">
               {supplier.contracts.map((contract) => (
-                <div key={contract.id} className="p-3 bg-gray-50 rounded-lg">
+                <div key={contract.id} className="p-3 bg-slate-800 rounded-lg">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold text-gray-900">{contract.id}</span>
+                        <span className="font-semibold text-white">{contract.id}</span>
                         <Badge variant={contract.status === 'active' ? 'success' : 'warning'}>
                           {contract.status.toUpperCase()}
                         </Badge>
                       </div>
-                      <div className="grid grid-cols-3 gap-4 mt-2 text-sm text-gray-600">
+                      <div className="grid grid-cols-3 gap-4 mt-2 text-sm text-slate-400">
                         <div>
-                          <span className="text-xs text-gray-500">Period:</span>
-                          <p className="font-medium text-gray-900">{contract.startDate} to {contract.endDate}</p>
+                          <span className="text-xs text-slate-500">Period:</span>
+                          <p className="font-medium text-white">{contract.startDate} to {contract.endDate}</p>
                         </div>
                         <div>
-                          <span className="text-xs text-gray-500">Volume:</span>
-                          <p className="font-medium text-gray-900">{contract.volume.toLocaleString()} units</p>
+                          <span className="text-xs text-slate-500">Volume:</span>
+                          <p className="font-medium text-white">{contract.volume.toLocaleString()} units</p>
                         </div>
                       </div>
                     </div>
@@ -146,7 +146,7 @@ export default function SupplierDetailModal({ isOpen, onClose, supplier }) {
         {/* Incident History */}
         {supplier.incidents && supplier.incidents.length > 0 && (
           <div>
-            <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+            <h4 className="font-semibold text-white mb-3 flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-orange-600" />
               Incident History ({supplier.incidents.length})
             </h4>
@@ -170,9 +170,9 @@ export default function SupplierDetailModal({ isOpen, onClose, supplier }) {
                         }>
                           {incident.type.toUpperCase()}
                         </Badge>
-                        <span className="text-sm font-medium text-gray-900">{incident.date}</span>
+                        <span className="text-sm font-medium text-white">{incident.date}</span>
                       </div>
-                      <p className="text-sm text-gray-700 mt-1">{incident.resolution}</p>
+                      <p className="text-sm text-slate-300 mt-1">{incident.resolution}</p>
                     </div>
                   </div>
                 </div>
@@ -183,34 +183,34 @@ export default function SupplierDetailModal({ isOpen, onClose, supplier }) {
 
         {/* Performance Trend (Mock) */}
         <div>
-          <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+          <h4 className="font-semibold text-white mb-3 flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-green-600" />
             Performance Trend
           </h4>
           <div className="grid grid-cols-3 gap-4 text-center">
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <p className="text-xs text-gray-600 mb-1">Last 30 Days</p>
+            <div className="p-3 bg-slate-800 rounded-lg">
+              <p className="text-xs text-slate-400 mb-1">Last 30 Days</p>
               <p className="text-lg font-bold text-green-600">{supplier.onTimeDelivery}%</p>
               <p className="text-xs text-green-600 mt-1">↑ 2%</p>
             </div>
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <p className="text-xs text-gray-600 mb-1">Last 90 Days</p>
+            <div className="p-3 bg-slate-800 rounded-lg">
+              <p className="text-xs text-slate-400 mb-1">Last 90 Days</p>
               <p className="text-lg font-bold text-green-600">{Math.max(supplier.onTimeDelivery - 3, 70)}%</p>
               <p className="text-xs text-red-600 mt-1">↓ 1%</p>
             </div>
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <p className="text-xs text-gray-600 mb-1">Last Year</p>
-              <p className="text-lg font-bold text-gray-900">{Math.max(supplier.onTimeDelivery - 5, 65)}%</p>
-              <p className="text-xs text-gray-600 mt-1">→ 0%</p>
+            <div className="p-3 bg-slate-800 rounded-lg">
+              <p className="text-xs text-slate-400 mb-1">Last Year</p>
+              <p className="text-lg font-bold text-white">{Math.max(supplier.onTimeDelivery - 5, 65)}%</p>
+              <p className="text-xs text-slate-400 mt-1">→ 0%</p>
             </div>
           </div>
         </div>
 
         {/* Actions */}
-        <div className="flex gap-3 pt-4 border-t border-gray-200">
+        <div className="flex gap-3 pt-4 border-t border-slate-800">
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+            className="flex-1 px-4 py-2.5 border border-slate-700 text-slate-300 rounded-lg font-medium hover:bg-slate-800 transition-colors"
           >
             Close
           </button>

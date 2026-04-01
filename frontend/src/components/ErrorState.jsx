@@ -11,9 +11,9 @@ export default function ErrorState({
         <AlertTriangle className="h-12 w-12 text-red-500" />
       </div>
       <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-1">{title}</h3>
+        <h3 className="text-lg font-semibold text-white mb-1">{title}</h3>
         {message && (
-          <p className="text-sm text-gray-500 max-w-md">{message}</p>
+          <p className="text-sm text-slate-500 max-w-md">{message}</p>
         )}
       </div>
       {onRetry && (

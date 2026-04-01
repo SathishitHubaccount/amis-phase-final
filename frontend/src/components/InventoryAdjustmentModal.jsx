@@ -72,31 +72,31 @@ export default function InventoryAdjustmentModal({ isOpen, onClose, productId, p
           <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
             <CheckCircle className="h-8 w-8 text-green-600" />
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Inventory Adjusted!</h3>
-          <p className="text-sm text-gray-600">
+          <h3 className="text-lg font-semibold text-white mb-2">Inventory Adjusted!</h3>
+          <p className="text-sm text-slate-400">
             Inventory for {productName} has been successfully updated.
           </p>
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Product Info */}
-          <div className="p-4 bg-gray-50 rounded-lg">
-            <h4 className="font-semibold text-gray-900 mb-2">Product Information</h4>
+          <div className="p-4 bg-slate-800 rounded-lg">
+            <h4 className="font-semibold text-white mb-2">Product Information</h4>
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div>
-                <span className="text-gray-600">Product ID:</span>
+                <span className="text-slate-400">Product ID:</span>
                 <span className="ml-2 font-medium">{productId}</span>
               </div>
               <div>
-                <span className="text-gray-600">Product Name:</span>
+                <span className="text-slate-400">Product Name:</span>
                 <span className="ml-2 font-medium">{productName}</span>
               </div>
               <div>
-                <span className="text-gray-600">Current Stock:</span>
+                <span className="text-slate-400">Current Stock:</span>
                 <span className="ml-2 font-medium text-blue-600">{currentStock} units</span>
               </div>
               <div>
-                <span className="text-gray-600">New Stock:</span>
+                <span className="text-slate-400">New Stock:</span>
                 <span className={`ml-2 font-medium ${
                   previewNewStock() < currentStock ? 'text-red-600' : 'text-green-600'
                 }`}>
@@ -108,7 +108,7 @@ export default function InventoryAdjustmentModal({ isOpen, onClose, productId, p
 
           {/* Adjustment Type */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-slate-300 mb-2">
               Adjustment Type
             </label>
             <div className="grid grid-cols-2 gap-3">
@@ -118,7 +118,7 @@ export default function InventoryAdjustmentModal({ isOpen, onClose, productId, p
                 className={`px-4 py-3 border-2 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
                   formData.adjustmentType === 'add'
                     ? 'bg-green-50 border-green-500 text-green-700'
-                    : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'
+                    : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'
                 }`}
               >
                 <Plus className="h-5 w-5" />
@@ -130,7 +130,7 @@ export default function InventoryAdjustmentModal({ isOpen, onClose, productId, p
                 className={`px-4 py-3 border-2 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
                   formData.adjustmentType === 'remove'
                     ? 'bg-red-50 border-red-500 text-red-700'
-                    : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'
+                    : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'
                 }`}
               >
                 <Minus className="h-5 w-5" />
@@ -141,7 +141,7 @@ export default function InventoryAdjustmentModal({ isOpen, onClose, productId, p
 
           {/* Quantity */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-slate-300 mb-2">
               Quantity
             </label>
             <input
@@ -150,23 +150,23 @@ export default function InventoryAdjustmentModal({ isOpen, onClose, productId, p
               onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
               placeholder="Enter quantity"
               min="1"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full px-3 py-2 border border-slate-700 bg-slate-800 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
               required
             />
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-slate-500 mt-1">
               {formData.adjustmentType === 'add' ? 'Stock will increase by' : 'Stock will decrease by'} this amount
             </p>
           </div>
 
           {/* Reason */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-slate-300 mb-2">
               Reason for Adjustment
             </label>
             <select
               value={formData.reason}
               onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 mb-2"
+              className="w-full px-3 py-2 border border-slate-700 bg-slate-800 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 mb-2"
               required
             >
               <option value="">Select a reason</option>
@@ -183,7 +183,7 @@ export default function InventoryAdjustmentModal({ isOpen, onClose, productId, p
               <textarea
                 placeholder="Please specify the reason..."
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                className="w-full px-3 py-2 border border-slate-700 bg-slate-800 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
                 onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
                 required
               />
@@ -192,14 +192,14 @@ export default function InventoryAdjustmentModal({ isOpen, onClose, productId, p
 
           {/* User */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-slate-300 mb-2">
               Adjusted By
             </label>
             <input
               type="text"
               value={formData.user}
               onChange={(e) => setFormData({ ...formData, user: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full px-3 py-2 border border-slate-700 bg-slate-800 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
               required
             />
           </div>
@@ -219,7 +219,7 @@ export default function InventoryAdjustmentModal({ isOpen, onClose, productId, p
               type="button"
               onClick={onClose}
               disabled={adjustInventoryMutation.isPending}
-              className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2.5 border border-slate-700 text-slate-300 rounded-lg font-medium hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancel
             </button>

@@ -65,10 +65,10 @@ export default function ForecastInputModal({ isOpen, onClose, onSubmit, productI
         <div className="fixed inset-0 z-50 overflow-y-auto">
             <div className="fixed inset-0 bg-black bg-opacity-50" onClick={onClose} />
             <div className="flex min-h-full items-center justify-center p-4">
-                <div className="relative w-full max-w-md bg-white rounded-lg shadow-xl p-6">
+                <div className="relative w-full max-w-md bg-slate-900 rounded-lg shadow-xl p-6">
                     <div className="flex items-center justify-between mb-4">
                         <h2 className="text-xl font-bold">Add Demand Forecast</h2>
-                        <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">
+                        <button onClick={onClose} className="p-1 hover:bg-slate-700 rounded">
                             <X className="h-5 w-5" />
                         </button>
                     </div>
@@ -117,7 +117,7 @@ export default function ForecastInputModal({ isOpen, onClose, onSubmit, productI
                                 placeholder="Select week start date"
                             />
                             {formData.forecast_date && (
-                                <p className="text-xs text-gray-500 mt-1">Week {formData.week_number} of 2026</p>
+                                <p className="text-xs text-slate-500 mt-1">Week {formData.week_number} of 2026</p>
                             )}
                             {errors.forecast_date && <p className="text-red-500 text-sm">{errors.forecast_date}</p>}
                         </div>
@@ -125,7 +125,7 @@ export default function ForecastInputModal({ isOpen, onClose, onSubmit, productI
                         <div>
                             <label className="block text-sm font-medium mb-1">
                                 Base Case Demand <span className="text-red-500">*</span>
-                                <span className="text-xs text-gray-500 ml-2">(Most likely scenario - 55% probability)</span>
+                                <span className="text-xs text-slate-500 ml-2">(Most likely scenario - 55% probability)</span>
                             </label>
                             <div className="relative">
                                 <input
@@ -144,7 +144,7 @@ export default function ForecastInputModal({ isOpen, onClose, onSubmit, productI
                                     className={`w-full px-3 py-2 border rounded-lg ${errors.base_case ? 'border-red-500' : ''}`}
                                     placeholder="e.g., 1400"
                                 />
-                                <span className="absolute right-3 top-2.5 text-gray-400 text-sm">units</span>
+                                <span className="absolute right-3 top-2.5 text-slate-500 text-sm">units</span>
                             </div>
                             {errors.base_case && <p className="text-red-500 text-sm">{errors.base_case}</p>}
                         </div>
@@ -153,7 +153,7 @@ export default function ForecastInputModal({ isOpen, onClose, onSubmit, productI
                             <div>
                                 <label className="block text-sm font-medium mb-1">
                                     Optimistic Scenario
-                                    <span className="text-xs text-gray-500 block">(20% probability)</span>
+                                    <span className="text-xs text-slate-500 block">(20% probability)</span>
                                 </label>
                                 <div className="relative">
                                     <input
@@ -163,7 +163,7 @@ export default function ForecastInputModal({ isOpen, onClose, onSubmit, productI
                                         className={`w-full px-3 py-2 border rounded-lg ${errors.optimistic ? 'border-red-500' : ''}`}
                                         placeholder="Auto-filled"
                                     />
-                                    <span className="absolute right-3 top-2.5 text-gray-400 text-xs">units</span>
+                                    <span className="absolute right-3 top-2.5 text-slate-500 text-xs">units</span>
                                 </div>
                                 {errors.optimistic && <p className="text-red-500 text-xs">{errors.optimistic}</p>}
                             </div>
@@ -171,7 +171,7 @@ export default function ForecastInputModal({ isOpen, onClose, onSubmit, productI
                             <div>
                                 <label className="block text-sm font-medium mb-1">
                                     Conservative Scenario
-                                    <span className="text-xs text-gray-500 block">(25% probability)</span>
+                                    <span className="text-xs text-slate-500 block">(25% probability)</span>
                                 </label>
                                 <div className="relative">
                                     <input
@@ -181,27 +181,27 @@ export default function ForecastInputModal({ isOpen, onClose, onSubmit, productI
                                         className={`w-full px-3 py-2 border rounded-lg ${errors.pessimistic ? 'border-red-500' : ''}`}
                                         placeholder="Auto-filled"
                                     />
-                                    <span className="absolute right-3 top-2.5 text-gray-400 text-xs">units</span>
+                                    <span className="absolute right-3 top-2.5 text-slate-500 text-xs">units</span>
                                 </div>
                                 {errors.pessimistic && <p className="text-red-500 text-xs">{errors.pessimistic}</p>}
                             </div>
                         </div>
 
                         {formData.base_case && (
-                            <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-                                <p className="text-xs font-medium text-gray-700 mb-2">📊 Forecast Range Preview</p>
-                                <div className="flex justify-between text-xs text-gray-600">
+                            <div className="p-3 bg-slate-800 rounded-lg border border-slate-800">
+                                <p className="text-xs font-medium text-slate-300 mb-2">📊 Forecast Range Preview</p>
+                                <div className="flex justify-between text-xs text-slate-400">
                                     <div className="text-center">
                                         <p className="text-red-600 font-semibold">{formData.pessimistic || '-'}</p>
-                                        <p className="text-gray-500">Conservative</p>
+                                        <p className="text-slate-500">Conservative</p>
                                     </div>
                                     <div className="text-center">
                                         <p className="text-blue-600 font-semibold text-base">{formData.base_case}</p>
-                                        <p className="text-gray-500">Base Case</p>
+                                        <p className="text-slate-500">Base Case</p>
                                     </div>
                                     <div className="text-center">
                                         <p className="text-green-600 font-semibold">{formData.optimistic || '-'}</p>
-                                        <p className="text-gray-500">Optimistic</p>
+                                        <p className="text-slate-500">Optimistic</p>
                                     </div>
                                 </div>
                             </div>

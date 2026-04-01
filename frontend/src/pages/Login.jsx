@@ -22,7 +22,7 @@ export default function Login() {
       formData.append('password', password)
 
       console.log('Sending login request...')
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch('http://localhost:8000/api/auth/login', {
         method: 'POST',
         body: formData,
       })
@@ -43,7 +43,7 @@ export default function Login() {
 
       // Fetch user info
       console.log('Fetching user info...')
-      const userResponse = await fetch('/api/auth/me', {
+      const userResponse = await fetch('http://localhost:8000/api/auth/me', {
         headers: { 'Authorization': `Bearer ${data.access_token}` }
       })
 
@@ -66,13 +66,13 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
+      <div className="bg-slate-900 rounded-2xl border border-slate-800 shadow-2xl p-8 w-full max-w-md">
         <div className="text-center mb-8">
           <div className="inline-block p-3 bg-indigo-100 rounded-full mb-4">
             <Lock className="w-8 h-8 text-indigo-600" />
           </div>
           <h1 className="text-3xl font-bold text-gray-800">AMIS Login</h1>
-          <p className="text-gray-600 mt-2">Manufacturing Intelligence System</p>
+          <p className="text-slate-400 mt-2">Manufacturing Intelligence System</p>
         </div>
 
         {error && (
@@ -84,7 +84,7 @@ export default function Login() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-slate-300 mb-2">
               Username
             </label>
             <div className="relative">
@@ -93,7 +93,7 @@ export default function Login() {
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-3 border border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 placeholder="Enter username"
                 required
               />
@@ -101,7 +101,7 @@ export default function Login() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-slate-300 mb-2">
               Password
             </label>
             <div className="relative">
@@ -110,7 +110,7 @@ export default function Login() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-3 border border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 placeholder="Enter password"
                 required
               />

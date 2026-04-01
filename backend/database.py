@@ -857,6 +857,144 @@ def update_production_schedule(schedule_id: int, updates: Dict) -> bool:
 
     return success
 
+# ============================================================================
+# NOTIFICATIONS
+# ============================================================================
+
+def ensure_notifications_table():
+    """Create notifications table if it doesn't exist"""
+    conn = get_db_connection()
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS notifications (
+            id TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            message TEXT NOT NULL,
+            category TEXT DEFAULT 'system',
+            severity TEXT DEFAULT 'info',
+            read INTEGER DEFAULT 0,
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+def get_notifications(limit: int = 50) -> List[Dict]:
+    """Get all notifications ordered by newest first"""
+    ensure_notifications_table()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT * FROM notifications ORDER BY timestamp DESC LIMIT ?", (limit,)
+    )
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    # Convert read 0/1 to bool
+    for r in rows:
+        r['read'] = bool(r['read'])
+    return rows
+
+def add_notification_db(notification_id: str, title: str, message: str,
+                        category: str = 'system', severity: str = 'info') -> str:
+    """Insert a new notification"""
+    ensure_notifications_table()
+    conn = get_db_connection()
+    conn.execute("""
+        INSERT OR IGNORE INTO notifications (id, title, message, category, severity, read)
+        VALUES (?, ?, ?, ?, ?, 0)
+    """, (notification_id, title, message, category, severity))
+    conn.commit()
+    conn.close()
+    return notification_id
+
+def mark_notification_read_db(notification_id: str) -> bool:
+    """Mark a notification as read"""
+    ensure_notifications_table()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE notifications SET read = 1 WHERE id = ?", (notification_id,)
+    )
+    conn.commit()
+    success = cursor.rowcount > 0
+    conn.close()
+    return success
+
+def mark_all_notifications_read_db() -> int:
+    """Mark all notifications as read, return count updated"""
+    ensure_notifications_table()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE notifications SET read = 1 WHERE read = 0")
+    conn.commit()
+    count = cursor.rowcount
+    conn.close()
+    return count
+
+def delete_notification_db(notification_id: str) -> bool:
+    """Delete (dismiss) a notification"""
+    ensure_notifications_table()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM notifications WHERE id = ?", (notification_id,))
+    conn.commit()
+    success = cursor.rowcount > 0
+    conn.close()
+    return success
+
+def seed_notifications_from_db():
+    """Generate initial notifications based on live machine/inventory data"""
+    ensure_notifications_table()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) as cnt FROM notifications")
+    count = cursor.fetchone()['cnt']
+    conn.close()
+
+    if count > 0:
+        return  # Already seeded
+
+    machines = get_all_machines()
+    all_inventory = []
+    for product in get_all_products():
+        inv = get_inventory(product['id'])
+        if inv:
+            all_inventory.append(inv)
+
+    import uuid as _uuid
+    for machine in machines:
+        risk = machine.get('failure_risk', 0)
+        if isinstance(risk, float) and risk < 1:
+            risk = risk * 100
+        if risk > 50:
+            add_notification_db(
+                str(_uuid.uuid4()),
+                f"{machine['id']} Critical Risk",
+                f"Failure risk at {risk:.0f}% — maintenance required",
+                category='machine',
+                severity='critical'
+            )
+        elif risk > 30:
+            add_notification_db(
+                str(_uuid.uuid4()),
+                f"{machine['id']} Elevated Risk",
+                f"Failure risk at {risk:.0f}% — schedule inspection",
+                category='machine',
+                severity='high'
+            )
+
+    for inv in all_inventory:
+        stock = inv.get('current_stock', 0)
+        rop = inv.get('reorder_point', 0)
+        if stock < rop:
+            add_notification_db(
+                str(_uuid.uuid4()),
+                f"Reorder Alert: {inv.get('product_id')}",
+                f"Stock {stock} units is below reorder point of {rop} units",
+                category='inventory',
+                severity='high'
+            )
+
+
 if __name__ == "__main__":
     # Initialize database if run directly
     print("Initializing AMIS database...")

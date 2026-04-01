@@ -82,18 +82,8 @@ def create_maintenance_decision(machine_output: dict):
     critical_machines = machine_output.get("critical_machines", [])
 
     if not critical_machines:
-        # No critical machines, return a no-op decision
-        return approval_system.create_decision(
-            decision_type="machine_maintenance",
-            action="No maintenance required",
-            description="AI detected no critical machine issues",
-            impact_analysis={
-                "financial_impact": 0,
-                "affects_production": False,
-                "affects_safety": False
-            },
-            payload=machine_output
-        )
+        # No critical machines — nothing to approve, skip creating a decision
+        return None
 
     # Estimate maintenance cost ($5K per machine)
     estimated_cost = len(critical_machines) * 5000

@@ -11,9 +11,10 @@ import SupplierManagement from './pages/SupplierManagement'
 import Chat from './pages/Chat'
 import Negotiation from './pages/Negotiation'
 import Login from './pages/Login'
-import Integrations from './pages/Integrations'
 import AuditLog from './pages/AuditLog'
-import ScenarioPlanner from './pages/ScenarioPlanner'
+import Evals from './pages/Evals'
+import Observability from './pages/Observability'
+import Presentation from './pages/Presentation'
 
 function App() {
   return (
@@ -30,9 +31,10 @@ function App() {
         <Route path="/suppliers" element={<ProtectedRoute><Layout><SupplierManagement /></Layout></ProtectedRoute>} />
         <Route path="/negotiation" element={<ProtectedRoute><Layout><Negotiation /></Layout></ProtectedRoute>} />
         <Route path="/chat" element={<ProtectedRoute><Layout><Chat /></Layout></ProtectedRoute>} />
-        <Route path="/integrations" element={<ProtectedRoute><Layout><Integrations /></Layout></ProtectedRoute>} />
         <Route path="/audit" element={<ProtectedRoute><Layout><AuditLog /></Layout></ProtectedRoute>} />
-        <Route path="/scenarios" element={<ProtectedRoute><Layout><ScenarioPlanner /></Layout></ProtectedRoute>} />
+        <Route path="/evals" element={<ProtectedRoute><Layout><Evals /></Layout></ProtectedRoute>} />
+        <Route path="/observability" element={<ProtectedRoute><Layout><Observability /></Layout></ProtectedRoute>} />
+        <Route path="/presentation" element={<ProtectedRoute><Presentation /></ProtectedRoute>} />
       </Routes>
     </Router>
   )

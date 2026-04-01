@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import {
   Play,
   CheckCircle,
@@ -17,12 +19,59 @@ import {
   Layers,
   ChevronDown,
   ChevronUp,
+  Eye,
+  EyeOff,
+  ArrowRight,
+  Wrench,
+  Zap,
 } from 'lucide-react'
 import Card, { CardHeader, CardTitle, CardContent, CardDescription } from '../components/Card'
 import Badge from '../components/Badge'
 import { apiClient } from '../lib/api'
 import { formatDate } from '../lib/utils'
 import { useNotificationStore } from '../store/notificationStore'
+
+const markdownComponents = {
+  h1: ({ children }) => <h1 className="text-xl font-black text-white mt-5 mb-3 first:mt-0 pb-2 border-b border-slate-700">{children}</h1>,
+  h2: ({ children }) => (
+    <h2 className="text-base font-bold text-white mt-5 mb-2.5 first:mt-0 flex items-center gap-2">
+      <span className="inline-block w-1 h-4 rounded-full bg-primary-500 shrink-0" />
+      {children}
+    </h2>
+  ),
+  h3: ({ children }) => <h3 className="text-sm font-bold text-slate-200 mt-4 mb-2 first:mt-0">{children}</h3>,
+  p: ({ children }) => <p className="text-sm text-slate-200 leading-relaxed mb-3 last:mb-0">{children}</p>,
+  strong: ({ children }) => <strong className="font-bold text-white">{children}</strong>,
+  em: ({ children }) => <em className="italic text-slate-300">{children}</em>,
+  ul: ({ children }) => <ul className="space-y-1.5 mb-3 ml-1">{children}</ul>,
+  ol: ({ children }) => <ol className="space-y-1.5 mb-3 ml-1 list-none">{children}</ol>,
+  li: ({ children }) => (
+    <li className="flex items-start gap-2.5 text-sm text-slate-200 leading-relaxed">
+      <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary-400 shrink-0" />
+      <span className="flex-1">{children}</span>
+    </li>
+  ),
+  blockquote: ({ children }) => (
+    <blockquote className="border-l-4 border-primary-500 pl-4 py-1 my-3 bg-primary-500/5 rounded-r-lg text-slate-300 italic text-sm">{children}</blockquote>
+  ),
+  code: ({ inline, children }) =>
+    inline ? (
+      <code className="px-1.5 py-0.5 rounded bg-slate-700 text-primary-300 font-mono text-xs font-semibold">{children}</code>
+    ) : (
+      <pre className="bg-slate-800 border border-slate-700 rounded-xl p-4 overflow-x-auto my-3">
+        <code className="text-xs font-mono text-slate-200">{children}</code>
+      </pre>
+    ),
+  hr: () => <hr className="border-slate-700 my-4" />,
+  table: ({ children }) => (
+    <div className="overflow-x-auto my-3 rounded-xl border border-slate-700">
+      <table className="w-full text-sm">{children}</table>
+    </div>
+  ),
+  thead: ({ children }) => <thead className="bg-slate-800">{children}</thead>,
+  th: ({ children }) => <th className="px-4 py-2.5 text-left text-xs font-bold text-slate-300 uppercase tracking-wider">{children}</th>,
+  td: ({ children }) => <td className="px-4 py-2.5 text-sm text-slate-200 border-t border-slate-700/50">{children}</td>,
+}
 
 const agents = [
   { id: 'demand', name: 'Demand Forecasting', icon: TrendingUp, color: 'text-blue-600' },
@@ -41,28 +90,26 @@ const pipelineNodes = [
   { id: 'synthesis', label: 'Synthesis', icon: Layers },
 ]
 
-// Approximate durations (seconds) for each agent in the pipeline
-const agentDurations = [18, 16, 14, 20, 18, 12]
 
 function NodeStatus({ status }) {
   if (status === 'running') {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-700">
-        <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" />
+      <span className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-xs font-medium bg-blue-500/15 text-blue-400 border border-blue-500/25">
+        <span className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-pulse" />
         Running
       </span>
     )
   }
   if (status === 'complete') {
-    return <span className="inline-flex items-center rounded-full px-1.5 py-0.5 text-xs font-medium bg-green-100 text-green-700">Done</span>
+    return <span className="inline-flex items-center rounded-full px-1.5 py-0.5 text-xs font-medium bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">Done</span>
   }
   if (status === 'error') {
-    return <span className="inline-flex items-center rounded-full px-1.5 py-0.5 text-xs font-medium bg-red-100 text-red-700">Error</span>
+    return <span className="inline-flex items-center rounded-full px-1.5 py-0.5 text-xs font-medium bg-red-500/15 text-red-400 border border-red-500/25">Error</span>
   }
-  return <span className="inline-flex items-center rounded-full px-1.5 py-0.5 text-xs font-medium bg-gray-100 text-gray-500">Pending</span>
+  return <span className="inline-flex items-center rounded-full px-1.5 py-0.5 text-xs font-medium bg-slate-700 text-slate-500">Pending</span>
 }
 
-function AgentPipelineVisualizer({ nodeStatuses, nodeElapsed, agentOutputs, onNodeClick, expandedNode }) {
+function AgentPipelineVisualizer({ nodeStatuses, nodeElapsed, agentTrace, onNodeClick, expandedNode }) {
   return (
     <Card>
       <CardHeader>
@@ -85,11 +132,11 @@ function AgentPipelineVisualizer({ nodeStatuses, nodeElapsed, agentOutputs, onNo
                 ? 'bg-green-500'
                 : status === 'error'
                 ? 'bg-red-500'
-                : 'bg-gray-300'
+                : 'bg-slate-700'
 
             const lineClass =
               idx < pipelineNodes.length - 1
-                ? nodeStatuses[idx] === 'complete' ? 'bg-green-400' : 'bg-gray-200'
+                ? nodeStatuses[idx] === 'complete' ? 'bg-green-400' : 'bg-slate-700'
                 : ''
 
             return (
@@ -105,13 +152,13 @@ function AgentPipelineVisualizer({ nodeStatuses, nodeElapsed, agentOutputs, onNo
                   >
                     <NodeIcon className="h-5 w-5 text-white" />
                   </div>
-                  <span className="text-xs font-medium text-gray-700 text-center leading-tight">{node.label}</span>
+                  <span className="text-xs font-medium text-slate-300 text-center leading-tight">{node.label}</span>
                   <NodeStatus status={status} />
                   {status === 'running' && elapsed !== undefined && (
                     <span className="text-xs text-blue-600 font-mono">{elapsed}s</span>
                   )}
                   {status === 'complete' && elapsed !== undefined && (
-                    <span className="text-xs text-gray-400 font-mono">{elapsed}s</span>
+                    <span className="text-xs text-slate-500 font-mono">{elapsed}s</span>
                   )}
                 </button>
 
@@ -126,7 +173,7 @@ function AgentPipelineVisualizer({ nodeStatuses, nodeElapsed, agentOutputs, onNo
 
         {/* Expanded node output */}
         <AnimatePresence>
-          {expandedNode !== null && agentOutputs && (
+          {expandedNode !== null && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
@@ -134,18 +181,34 @@ function AgentPipelineVisualizer({ nodeStatuses, nodeElapsed, agentOutputs, onNo
               transition={{ duration: 0.3 }}
               className="mt-4 overflow-hidden"
             >
-              <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm font-semibold text-gray-800">
-                    {pipelineNodes[expandedNode]?.label} Output Summary
-                  </p>
-                </div>
-                <p className="text-xs text-gray-600 whitespace-pre-wrap leading-relaxed">
-                  {typeof agentOutputs === 'string'
-                    ? agentOutputs.split('\n').slice(0, 4).join('\n')
-                    : 'Agent completed successfully.'}
-                </p>
-              </div>
+              {(() => {
+                const traceStep = agentTrace?.[expandedNode]
+                const node = pipelineNodes[expandedNode]
+                return (
+                  <div className="p-4 bg-slate-900 rounded-lg border border-slate-800">
+                    <p className="text-sm font-semibold text-slate-200 mb-3">
+                      {node?.label} — Quick Summary
+                    </p>
+                    {traceStep ? (
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-2 gap-2">
+                          {traceStep.key_findings?.map((f) => (
+                            <div key={f.label} className="bg-slate-900 rounded border border-slate-800 px-2.5 py-1.5">
+                              <p className="text-[10px] text-slate-500">{f.label}</p>
+                              <p className="text-xs font-semibold text-slate-200">{f.value}</p>
+                            </div>
+                          ))}
+                        </div>
+                        <p className="text-[10px] text-slate-500 pt-1">
+                          {traceStep.tools_called?.length} tools called · {((traceStep.duration_ms || 0) / 1000).toFixed(2)}s
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-slate-500">Agent completed successfully.</p>
+                    )}
+                  </div>
+                )
+              })()}
             </motion.div>
           )}
         </AnimatePresence>
@@ -154,9 +217,282 @@ function AgentPipelineVisualizer({ nodeStatuses, nodeElapsed, agentOutputs, onNo
   )
 }
 
+// ─── colour maps ─────────────────────────────────────────────────────────────
+const AGENT_STYLES = {
+  demand:     { bg: 'bg-blue-500/8',    border: 'border-blue-500/25',    dot: 'bg-blue-500',    text: 'text-blue-400',    badge: 'bg-blue-500/15 text-blue-400 border border-blue-500/25',    num: 'bg-blue-500' },
+  inventory:  { bg: 'bg-violet-500/8',  border: 'border-violet-500/25',  dot: 'bg-violet-500',  text: 'text-violet-400',  badge: 'bg-violet-500/15 text-violet-400 border border-violet-500/25',  num: 'bg-violet-500' },
+  machine:    { bg: 'bg-amber-500/8',   border: 'border-amber-500/25',   dot: 'bg-amber-500',   text: 'text-amber-400',   badge: 'bg-amber-500/15 text-amber-400 border border-amber-500/25',   num: 'bg-amber-500' },
+  production: { bg: 'bg-emerald-500/8', border: 'border-emerald-500/25', dot: 'bg-emerald-500', text: 'text-emerald-400', badge: 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/25', num: 'bg-emerald-500' },
+  supplier:   { bg: 'bg-rose-500/8',    border: 'border-rose-500/25',    dot: 'bg-rose-500',    text: 'text-rose-400',    badge: 'bg-rose-500/15 text-rose-400 border border-rose-500/25',    num: 'bg-rose-500' },
+}
+
+function PipelineTracePanel({ structuredResult }) {
+  const [open, setOpen] = useState(true)
+  const [expandedAgent, setExpandedAgent] = useState(null)
+
+  const trace = structuredResult?.pipeline_trace
+  if (!trace || trace.length === 0) return null
+
+  const totalTools = trace.reduce((s, t) => s + t.tools_called.length, 0)
+  const totalMs = trace.reduce((s, t) => s + (t.duration_ms || 0), 0)
+  const totalSec = (totalMs / 1000).toFixed(1)
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+    >
+      <div className="rounded-2xl border border-slate-700 bg-slate-900 overflow-hidden shadow-xl">
+
+        {/* ── Header ──────────────────────────────────────────── */}
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="w-full flex items-center justify-between px-8 py-5 bg-gradient-to-r from-indigo-500/10 to-violet-500/10 border-b border-slate-700 hover:from-indigo-500/15 hover:to-violet-500/15 transition-all"
+        >
+          <div className="flex items-center gap-4">
+            <div className="p-2.5 rounded-xl bg-indigo-500/15 border border-indigo-500/25">
+              {open ? <EyeOff className="h-5 w-5 text-indigo-400" /> : <Eye className="h-5 w-5 text-indigo-400" />}
+            </div>
+            <div className="text-left">
+              <p className="text-base font-bold text-white tracking-tight">
+                Behind the Scenes — How the AI Decided
+              </p>
+              <p className="text-sm text-slate-400 mt-0.5">
+                Each agent ran independently, then passed insights to the next
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-6">
+            {/* Summary stats */}
+            <div className="hidden md:flex items-center gap-6 pr-4 border-r border-slate-700">
+              <div className="text-center">
+                <p className="text-2xl font-black text-white">{trace.length}</p>
+                <p className="text-xs text-slate-500 font-medium">Agents</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-black text-indigo-400">{totalTools}</p>
+                <p className="text-xs text-slate-500 font-medium">Tool Calls</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-black text-emerald-400">{totalSec}s</p>
+                <p className="text-xs text-slate-500 font-medium">Total Time</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-sm font-semibold text-indigo-400">
+                <Zap className="h-3.5 w-3.5" />
+                Live AI Reasoning
+              </span>
+              {open ? <ChevronUp className="h-5 w-5 text-slate-500 ml-1" /> : <ChevronDown className="h-5 w-5 text-slate-500 ml-1" />}
+            </div>
+          </div>
+        </button>
+
+        {/* ── Body ────────────────────────────────────────────── */}
+        <AnimatePresence initial={false}>
+          {open && (
+            <motion.div
+              key="trace-body"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.35, ease: 'easeInOut' }}
+              className="overflow-hidden"
+            >
+              {/* Flow connector row */}
+              <div className="flex items-start gap-0 px-8 pt-6 pb-4 overflow-x-auto">
+                {trace.map((step, idx) => {
+                  const s = AGENT_STYLES[step.agent] || AGENT_STYLES.demand
+                  const isActive = expandedAgent === idx
+                  return (
+                    <div key={step.agent} className="flex items-center shrink-0">
+                      <button
+                        onClick={() => setExpandedAgent(isActive ? null : idx)}
+                        className={`flex flex-col items-center gap-2 px-4 py-3 rounded-xl border-2 transition-all min-w-[110px] ${
+                          isActive
+                            ? `${s.border} ${s.bg} shadow-lg`
+                            : 'border-slate-700 bg-slate-800/50 hover:border-slate-600'
+                        }`}
+                      >
+                        <div className={`w-10 h-10 rounded-full ${s.num} flex items-center justify-center shadow-lg`}>
+                          <span className="text-white text-sm font-black">{idx + 1}</span>
+                        </div>
+                        <span className={`text-xs font-bold text-center leading-tight ${isActive ? s.text : 'text-slate-300'}`}>
+                          {step.label.replace(' Agent', '')}
+                        </span>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${s.badge}`}>
+                          {step.tools_called.length} tools
+                        </span>
+                        <span className="text-[10px] text-slate-500 font-mono">
+                          {((step.duration_ms || 0) / 1000).toFixed(1)}s
+                        </span>
+                      </button>
+                      {idx < trace.length - 1 && (
+                        <div className="flex items-center px-1">
+                          <div className="h-0.5 w-8 bg-gradient-to-r from-slate-600 to-slate-600" />
+                          <ArrowRight className="h-4 w-4 text-slate-600 -ml-1" />
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Expanded agent detail */}
+              <AnimatePresence>
+                {expandedAgent !== null && trace[expandedAgent] && (() => {
+                  const step = trace[expandedAgent]
+                  const s = AGENT_STYLES[step.agent] || AGENT_STYLES.demand
+                  return (
+                    <motion.div
+                      key={expandedAgent}
+                      initial={{ opacity: 0, y: -8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      transition={{ duration: 0.25 }}
+                      className={`mx-6 mb-6 rounded-2xl border-2 ${s.border} overflow-hidden shadow-2xl`}
+                    >
+                      {/* Agent header stripe */}
+                      <div className={`px-7 py-5 ${s.bg} flex items-center justify-between`}>
+                        <div className="flex items-center gap-4">
+                          <div className={`w-12 h-12 rounded-2xl ${s.num} flex items-center justify-center shadow-lg`}>
+                            <span className="text-white text-xl font-black">{expandedAgent + 1}</span>
+                          </div>
+                          <div>
+                            <p className={`text-2xl font-black ${s.text}`}>{step.label}</p>
+                            <p className="text-sm text-slate-300 mt-0.5 font-medium">
+                              {step.tools_called.length} tools executed &nbsp;·&nbsp; {((step.duration_ms || 0) / 1000).toFixed(1)}s runtime
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 bg-emerald-500/15 border border-emerald-500/30 px-4 py-2 rounded-xl">
+                          <CheckCircle className="h-5 w-5 text-emerald-400" />
+                          <span className="text-sm font-bold text-emerald-400">Completed</span>
+                        </div>
+                      </div>
+
+                      <div className="bg-slate-900 p-7 space-y-7">
+
+                        {/* KEY FINDINGS — large bright stat cards */}
+                        {step.key_findings?.length > 0 && (
+                          <div>
+                            <p className={`text-sm font-black uppercase tracking-widest mb-4 flex items-center gap-2 ${s.text}`}>
+                              <span className={`inline-block w-1 h-4 rounded-full ${s.num}`} />
+                              Key Findings
+                            </p>
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                              {step.key_findings.map((f) => {
+                                const isAlert = f.value.includes('⚠') || f.value.toLowerCase().startsWith('yes')
+                                return (
+                                  <div key={f.label} className={`rounded-2xl border-2 p-5 ${isAlert ? 'border-red-500/40 bg-red-500/10' : `${s.border} ${s.bg}`}`}>
+                                    <p className={`text-xs font-bold uppercase tracking-wider mb-2 ${isAlert ? 'text-red-400' : 'text-slate-300'}`}>{f.label}</p>
+                                    <p className={`text-3xl font-black leading-none ${isAlert ? 'text-red-300' : s.text}`}>
+                                      {f.value}
+                                    </p>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* CLAUDE'S ANALYSIS */}
+                        {step.llm_reasoning && (
+                          <div className={`rounded-2xl border-2 ${s.border} p-6`} style={{ background: 'rgba(15,23,42,0.8)' }}>
+                            <p className={`text-sm font-black uppercase tracking-widest mb-4 flex items-center gap-2 ${s.text}`}>
+                              <Zap className="h-5 w-5" />
+                              Claude's Analysis
+                            </p>
+                            <div className="text-base text-slate-100 leading-relaxed font-medium prose prose-invert max-w-none">
+                              <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                                {step.llm_reasoning}
+                              </ReactMarkdown>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* TOOLS CALLED — clear numbered rows */}
+                        <div>
+                          <p className={`text-sm font-black uppercase tracking-widest mb-4 flex items-center gap-2 ${s.text}`}>
+                            <Wrench className="h-5 w-5" />
+                            Tools Executed in Order
+                          </p>
+                          <div className="space-y-2">
+                            {step.tools_called.map((tool) => (
+                              <div key={tool.order} className={`flex items-center gap-4 px-5 py-4 rounded-xl border ${s.border} bg-slate-800/80`}>
+                                {/* Step number */}
+                                <div className={`w-8 h-8 rounded-lg ${s.num} flex items-center justify-center shrink-0`}>
+                                  <span className="text-white text-sm font-black">{tool.order}</span>
+                                </div>
+                                {/* Tool name */}
+                                <code className={`text-sm font-bold font-mono ${s.text} shrink-0 min-w-[180px]`}>
+                                  {tool.name}
+                                </code>
+                                {/* Divider */}
+                                <div className="w-px h-6 bg-slate-700 shrink-0" />
+                                {/* Description */}
+                                <p className="text-sm text-slate-200 font-medium flex-1">
+                                  {tool.desc || '—'}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* PASSED TO NEXT */}
+                        {step.passed_to_next && (
+                          <div className={`flex items-center gap-4 p-5 rounded-2xl border-2 ${s.border} ${s.bg}`}>
+                            <div className={`p-2.5 rounded-xl ${s.num}`}>
+                              <ArrowRight className="h-5 w-5 text-white" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm font-bold text-white mb-2">
+                                Passed to <span className={`${s.text}`}>{step.passed_to_next.agent}</span>
+                              </p>
+                              <div className="flex flex-wrap gap-2">
+                                {step.passed_to_next.fields.map((field) => (
+                                  <span key={field} className={`text-sm font-mono font-semibold ${s.text} bg-slate-800 px-3 py-1 rounded-lg border ${s.border}`}>
+                                    {field}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  )
+                })()}
+              </AnimatePresence>
+
+              {/* Bottom hint if nothing expanded */}
+              {expandedAgent === null && (
+                <p className="text-center text-sm text-slate-600 pb-6">
+                  ↑ Click any agent above to see its full reasoning and findings
+                </p>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </motion.div>
+  )
+}
+
 export default function Pipeline() {
+  const queryClient = useQueryClient()
   const [currentRunId, setCurrentRunId] = useState(null)
   const [productId, setProductId] = useState('PROD-A')
+
+  const { data: productsData } = useQuery({
+    queryKey: ['products'],
+    queryFn: async () => {
+      const response = await apiClient.getProducts()
+      return response.data.products || response.data || []
+    }
+  })
+  const products = productsData || []
 
   // Pipeline visualizer state
   const [nodeStatuses, setNodeStatuses] = useState(Array(6).fill('pending'))
@@ -168,12 +504,15 @@ export default function Pipeline() {
   const elapsedTimersRef = useRef([])
 
   // Fetch pipeline run status
-  const { data: runData, refetch } = useQuery({
+  const { data: runData, refetch, isError: runIsError } = useQuery({
     queryKey: ['pipeline-run', currentRunId],
     queryFn: () => apiClient.getPipelineRun(currentRunId),
     enabled: !!currentRunId,
-    refetchInterval: (data) => {
-      return data?.data?.status === 'running' || data?.data?.status === 'pending' ? 2000 : false
+    retry: false,
+    // React Query v5: refetchInterval receives the Query object, not data
+    refetchInterval: (query) => {
+      const s = query.state.data?.data?.status
+      return s === 'running' || s === 'pending' ? 500 : false
     },
   })
 
@@ -224,11 +563,19 @@ export default function Pipeline() {
 
   // Sync visualizer with real run data
   useEffect(() => {
+    // Run not found (server restarted) — stop timer and reset
+    if (runIsError) {
+      stopVisualizerAnimation()
+      setCurrentRunId(null)
+      return
+    }
+
     if (!run) return
 
     if (run.status === 'completed') {
       setNodeStatuses(Array(6).fill('complete'))
       stopVisualizerAnimation()
+      queryClient.invalidateQueries({ queryKey: ['pipeline-runs'] })
     } else if (run.status === 'failed') {
       const completedCount = run.agents_completed?.length || 0
       setNodeStatuses((prev) => {
@@ -237,6 +584,7 @@ export default function Pipeline() {
         if (completedCount < 6) updated[completedCount] = 'error'
         return updated
       })
+      queryClient.invalidateQueries({ queryKey: ['pipeline-runs'] })
       stopVisualizerAnimation()
     } else if (run.status === 'running' && run.agents_completed) {
       const completedCount = run.agents_completed.length
@@ -247,59 +595,26 @@ export default function Pipeline() {
         return updated
       })
     }
-  }, [run])
+  }, [run, runIsError])
 
   function startVisualizerAnimation() {
     // Clear any previous timers
     stopVisualizerAnimation()
 
-    setNodeStatuses(Array(6).fill('pending'))
+    // Reset all node state — polling (useEffect on `run`) drives completions
+    setNodeStatuses((prev) => {
+      const updated = Array(6).fill('pending')
+      updated[0] = 'running' // node 0 is always running immediately
+      return updated
+    })
     setNodeElapsed({})
     setExpandedNode(null)
     setPipelineTimer(0)
 
-    // Pipeline-level timer
+    // Pipeline-level timer — counts up until stopVisualizerAnimation is called
     pipelineTimerRef.current = setInterval(() => {
       setPipelineTimer((t) => t + 1)
     }, 1000)
-
-    // Schedule each node transition
-    let cumulative = 0
-    agentDurations.forEach((duration, idx) => {
-      const startDelay = cumulative * 1000
-
-      // Start node
-      const startTimer = setTimeout(() => {
-        setNodeStatuses((prev) => {
-          const updated = [...prev]
-          updated[idx] = 'running'
-          return updated
-        })
-
-        // Per-node elapsed counter
-        let sec = 0
-        const elapsedTimer = setInterval(() => {
-          sec++
-          setNodeElapsed((prev) => ({ ...prev, [idx]: sec }))
-        }, 1000)
-        elapsedTimersRef.current[idx] = elapsedTimer
-      }, startDelay)
-
-      nodeTimersRef.current.push(startTimer)
-      cumulative += duration
-
-      // Complete node (will be overridden by real data if available)
-      const endTimer = setTimeout(() => {
-        clearInterval(elapsedTimersRef.current[idx])
-        setNodeStatuses((prev) => {
-          const updated = [...prev]
-          if (updated[idx] === 'running') updated[idx] = 'complete'
-          return updated
-        })
-      }, cumulative * 1000)
-
-      nodeTimersRef.current.push(endTimer)
-    })
   }
 
   function stopVisualizerAnimation() {
@@ -322,16 +637,19 @@ export default function Pipeline() {
 
   // Last run stats
   const lastCompletedRun = recentRuns?.data?.find((r) => r.status === 'completed')
-  const totalDuration = run?.completed_at && run?.created_at
-    ? Math.round((new Date(run.completed_at) - new Date(run.created_at)) / 1000)
+  const totalDuration = run?.completed_at && run?.started_at
+    ? Math.round((new Date(run.completed_at) - new Date(run.started_at)) / 1000)
+    : null
+  const successRate = recentRuns?.data?.length
+    ? Math.round((recentRuns.data.filter((r) => r.status === 'completed').length / recentRuns.data.length) * 100)
     : null
 
   return (
     <div className="space-y-6">
       {/* Page Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Pipeline Runner</h1>
-        <p className="mt-1 text-sm text-gray-500">
+        <h1 className="text-3xl font-bold text-white">Pipeline Runner</h1>
+        <p className="mt-1 text-sm text-slate-400">
           Execute full 5-agent manufacturing intelligence analysis
         </p>
       </div>
@@ -340,7 +658,7 @@ export default function Pipeline() {
       <AgentPipelineVisualizer
         nodeStatuses={nodeStatuses}
         nodeElapsed={nodeElapsed}
-        agentOutputs={run?.result}
+        agentTrace={run?.structured_result?.pipeline_trace}
         onNodeClick={handleNodeClick}
         expandedNode={expandedNode}
       />
@@ -352,17 +670,27 @@ export default function Pipeline() {
             <CardContent className="p-6">
               <div className="flex items-end gap-4">
                 <div className="flex-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Product ID
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Product
                   </label>
-                  <input
-                    type="text"
+                  <select
                     value={productId}
                     onChange={(e) => setProductId(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
-                    placeholder="e.g., PROD-A"
                     disabled={isRunning}
-                  />
+                    className="w-full px-4 py-2.5 border border-slate-700 bg-slate-800 text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors text-sm"
+                  >
+                    {products.length > 0 ? (
+                      products.map(p => (
+                        <option key={p.id} value={p.id}>{p.name} ({p.id})</option>
+                      ))
+                    ) : (
+                      <>
+                        <option value="PROD-A">Industrial Valve Assembly - Type A (PROD-A)</option>
+                        <option value="PROD-B">Industrial Valve Assembly - Type B (PROD-B)</option>
+                        <option value="PROD-C">Industrial Valve Assembly - Type C (PROD-C)</option>
+                      </>
+                    )}
+                  </select>
                 </div>
                 <button
                   onClick={() => startPipeline.mutate(productId)}
@@ -394,8 +722,8 @@ export default function Pipeline() {
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Last Run</span>
-                <span className="font-medium text-gray-800 text-right text-xs">
+                <span className="text-slate-400">Last Run</span>
+                <span className="font-medium text-slate-200 text-right text-xs">
                   {lastCompletedRun
                     ? formatDate(lastCompletedRun.created_at)
                     : run?.completed_at
@@ -404,8 +732,8 @@ export default function Pipeline() {
                 </span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Duration</span>
-                <span className="font-medium text-gray-800">
+                <span className="text-slate-400">Duration</span>
+                <span className="font-medium text-slate-200">
                   {isRunning
                     ? pipelineDurationStr
                     : totalDuration
@@ -414,15 +742,17 @@ export default function Pipeline() {
                 </span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Success Rate</span>
-                <span className="font-medium text-green-600">100%</span>
+                <span className="text-slate-400">Success Rate</span>
+                <span className={`font-medium ${successRate === 100 ? 'text-green-600' : successRate !== null && successRate < 80 ? 'text-red-600' : 'text-yellow-600'}`}>
+                  {successRate !== null ? `${successRate}%` : '—'}
+                </span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Next Scheduled</span>
-                <span className="font-medium text-gray-800">Manual trigger</span>
+                <span className="text-slate-400">Next Scheduled</span>
+                <span className="font-medium text-slate-200">Manual trigger</span>
               </div>
               {isRunning && (
-                <div className="pt-2 border-t border-gray-100">
+                <div className="pt-2 border-t border-slate-800">
                   <div className="flex items-center gap-2 text-xs text-blue-600">
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     Pipeline running — {pipelineDurationStr}
@@ -515,24 +845,24 @@ export default function Pipeline() {
         >
           {/* Database Sync Status */}
           {run?.sync_status && (
-            <Card className="border-green-200 bg-green-50">
+            <Card className="border-emerald-500/30 bg-emerald-500/8">
               <CardContent className="p-6">
                 <div className="flex items-start gap-3">
-                  <CheckCircle className="h-6 w-6 text-green-600 mt-0.5" />
+                  <CheckCircle className="h-6 w-6 text-emerald-400 mt-0.5" />
                   <div className="flex-1">
-                    <h3 className="text-sm font-semibold text-green-900 mb-2">
+                    <h3 className="text-sm font-semibold text-emerald-300 mb-2">
                       Database Automatically Updated
                     </h3>
-                    <p className="text-sm text-green-700 mb-3">
+                    <p className="text-sm text-emerald-400/80 mb-3">
                       AI insights have been synced to the database. All tabs now reflect the latest analysis.
                     </p>
                     {run.sync_status.changes_count > 0 && (
                       <div className="space-y-1">
-                        <p className="text-xs font-medium text-green-800">
+                        <p className="text-xs font-medium text-emerald-400">
                           Changes Applied ({run.sync_status.changes_count}):
                         </p>
                         {run.sync_status.changes.map((change, idx) => (
-                          <p key={idx} className="text-xs text-green-700 pl-4">
+                          <p key={idx} className="text-xs text-emerald-400/70 pl-4">
                             • {change}
                           </p>
                         ))}
@@ -544,6 +874,9 @@ export default function Pipeline() {
             </Card>
           )}
 
+          {/* Behind the Scenes — Agent Trace */}
+          <PipelineTracePanel structuredResult={run?.structured_result} />
+
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -553,17 +886,17 @@ export default function Pipeline() {
                     Completed at {formatDate(run.completed_at)}
                   </CardDescription>
                 </div>
-                <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center gap-2 transition-colors">
+                <button className="px-4 py-2 border border-slate-700 text-slate-300 rounded-lg hover:bg-slate-800 flex items-center gap-2 transition-colors">
                   <Download className="h-4 w-4" />
                   Export
                 </button>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="prose max-w-none">
-                <pre className="whitespace-pre-wrap text-sm bg-gray-50 p-6 rounded-lg border border-gray-200 max-h-96 overflow-y-auto">
+              <div className="bg-slate-900 p-6 rounded-lg border border-slate-800 max-h-[32rem] overflow-y-auto">
+                <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                   {run.result}
-                </pre>
+                </ReactMarkdown>
               </div>
             </CardContent>
           </Card>
@@ -577,15 +910,15 @@ export default function Pipeline() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <Card className="border-red-200 bg-red-50">
+          <Card className="border-red-500/30 bg-red-500/8">
             <CardContent className="p-6">
               <div className="flex items-start gap-3">
-                <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
+                <AlertCircle className="h-5 w-5 text-red-400 mt-0.5" />
                 <div>
-                  <h3 className="text-sm font-semibold text-red-900 mb-1">
+                  <h3 className="text-sm font-semibold text-red-300 mb-1">
                     Pipeline Failed
                   </h3>
-                  <p className="text-sm text-red-700">{run.error}</p>
+                  <p className="text-sm text-red-400/80">{run.error}</p>
                 </div>
               </div>
             </CardContent>
@@ -600,11 +933,11 @@ export default function Pipeline() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <Card className="border-orange-200">
+          <Card className="border-amber-500/30 bg-amber-500/5">
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
                 <span className="flex items-center gap-2">
-                  <AlertCircle className="h-5 w-5 text-orange-500" />
+                  <AlertCircle className="h-5 w-5 text-amber-400" />
                   Pending Manager Approvals
                 </span>
                 <Badge variant="warning">{pendingApprovals.length} awaiting decision</Badge>
@@ -633,46 +966,57 @@ export default function Pipeline() {
         </CardHeader>
         <CardContent>
           {!recentRuns?.data || recentRuns.data.length === 0 ? (
-            <p className="text-sm text-gray-500 text-center py-8">
+            <p className="text-sm text-slate-400 text-center py-8">
               No recent runs. Start an analysis to see results here.
             </p>
           ) : (
             <div className="space-y-3">
-              {recentRuns.data.map((run) => (
+              {recentRuns.data.map((pastRun) => (
                 <div
-                  key={run.id}
-                  className="flex items-center justify-between p-4 rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all cursor-pointer"
-                  onClick={() => setCurrentRunId(run.id)}
+                  key={pastRun.id}
+                  className={`flex items-center justify-between p-4 rounded-lg border transition-all cursor-pointer ${
+                    pastRun.id === currentRunId
+                      ? 'border-primary-500/40 bg-primary-500/8 shadow-sm shadow-primary-500/10'
+                      : 'border-slate-800 hover:border-slate-700 hover:shadow-sm'
+                  }`}
+                  onClick={() => setCurrentRunId(pastRun.id)}
                 >
                   <div className="flex items-center gap-3">
-                    {run.status === 'completed' ? (
+                    {pastRun.status === 'completed' ? (
                       <CheckCircle className="h-5 w-5 text-green-600" />
-                    ) : run.status === 'failed' ? (
+                    ) : pastRun.status === 'failed' ? (
                       <AlertCircle className="h-5 w-5 text-red-600" />
                     ) : (
                       <Loader2 className="h-5 w-5 text-blue-600 animate-spin" />
                     )}
                     <div>
-                      <p className="text-sm font-medium text-gray-900">
-                        {run.product_id}
+                      <p className="text-sm font-medium text-white">
+                        {products.find(p => p.id === pastRun.product_id)?.name || pastRun.product_id}
                       </p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-slate-400">
                         <Clock className="inline h-3 w-3 mr-1" />
-                        {formatDate(run.created_at)}
+                        {formatDate(pastRun.completed_at || pastRun.created_at)}
                       </p>
                     </div>
                   </div>
-                  <Badge
-                    variant={
-                      run.status === 'completed'
-                        ? 'success'
-                        : run.status === 'failed'
-                        ? 'error'
-                        : 'info'
-                    }
-                  >
-                    {run.status}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    {pastRun.completed_at && pastRun.started_at && (
+                      <span className="text-xs text-slate-500 font-mono">
+                        {Math.round((new Date(pastRun.completed_at) - new Date(pastRun.started_at)) / 1000)}s
+                      </span>
+                    )}
+                    <Badge
+                      variant={
+                        pastRun.status === 'completed'
+                          ? 'success'
+                          : pastRun.status === 'failed'
+                          ? 'error'
+                          : 'info'
+                      }
+                    >
+                      {pastRun.status}
+                    </Badge>
+                  </div>
                 </div>
               ))}
             </div>
@@ -691,44 +1035,44 @@ function AgentProgressItem({ agent, isCompleted, isCurrent, isPending, delay }) 
       transition={{ duration: 0.3, delay }}
       className={`flex items-center gap-4 p-4 rounded-lg border transition-all ${
         isCompleted
-          ? 'bg-green-50 border-green-200'
+          ? 'bg-emerald-500/8 border-emerald-500/25'
           : isCurrent
-          ? 'bg-blue-50 border-blue-200 shadow-sm'
-          : 'bg-gray-50 border-gray-200'
+          ? 'bg-blue-500/8 border-blue-500/25 shadow-lg shadow-blue-500/10'
+          : 'bg-slate-900 border-slate-800'
       }`}
     >
       <div
         className={`p-2 rounded-lg ${
           isCompleted
-            ? 'bg-green-100'
+            ? 'bg-emerald-500/15'
             : isCurrent
-            ? 'bg-blue-100'
-            : 'bg-gray-100'
+            ? 'bg-blue-500/15'
+            : 'bg-slate-800'
         }`}
       >
         <agent.icon
           className={`h-5 w-5 ${
             isCompleted
-              ? 'text-green-600'
+              ? 'text-emerald-400'
               : isCurrent
-              ? 'text-blue-600'
-              : 'text-gray-400'
+              ? 'text-blue-400'
+              : 'text-slate-500'
           }`}
         />
       </div>
       <div className="flex-1">
         <p
           className={`text-sm font-medium ${
-            isCompleted || isCurrent ? 'text-gray-900' : 'text-gray-500'
+            isCompleted || isCurrent ? 'text-white' : 'text-slate-500'
           }`}
         >
           {agent.name}
         </p>
       </div>
       {isCompleted ? (
-        <CheckCircle className="h-5 w-5 text-green-600" />
+        <CheckCircle className="h-5 w-5 text-emerald-400" />
       ) : isCurrent ? (
-        <Loader2 className="h-5 w-5 text-blue-600 animate-spin" />
+        <Loader2 className="h-5 w-5 text-blue-400 animate-spin" />
       ) : null}
     </motion.div>
   )
@@ -739,11 +1083,11 @@ function ApprovalItem({ item, onDecide }) {
   const [note, setNote] = useState('')
   const [decided, setDecided] = useState(false)
 
-  const riskColor = {
-    low: 'bg-green-100 text-green-700',
-    medium: 'bg-yellow-100 text-yellow-800',
-    high: 'bg-orange-100 text-orange-800',
-    critical: 'bg-red-100 text-red-700',
+  const riskConfig = {
+    low:      { pill: 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30', accent: 'border-l-emerald-500', glow: '' },
+    medium:   { pill: 'bg-amber-500/15 text-amber-400 border border-amber-500/30',       accent: 'border-l-amber-500',   glow: '' },
+    high:     { pill: 'bg-orange-500/15 text-orange-400 border border-orange-500/30',     accent: 'border-l-orange-500',  glow: 'shadow-orange-500/5' },
+    critical: { pill: 'bg-red-500/15 text-red-400 border border-red-500/30',             accent: 'border-l-red-500',     glow: 'shadow-red-500/10' },
   }
 
   const agentTypeLabel = {
@@ -755,45 +1099,47 @@ function ApprovalItem({ item, onDecide }) {
 
   if (decided) return null
 
+  const rc = riskConfig[item.risk_level] || riskConfig.medium
+
   return (
-    <div className="p-4 border border-orange-200 rounded-lg bg-orange-50/40 space-y-3">
+    <div className={`relative border-l-4 ${rc.accent} bg-slate-800/50 border border-slate-700 rounded-r-xl rounded-bl-xl p-5 space-y-3 shadow-lg ${rc.glow}`}>
       <div className="flex flex-wrap items-center gap-2">
-        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${riskColor[item.risk_level] || 'bg-gray-100 text-gray-700'}`}>
+        <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full tracking-wide ${rc.pill}`}>
           {item.risk_level?.toUpperCase()} RISK
         </span>
-        <span className="text-xs font-medium bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
+        <span className="text-xs font-medium bg-slate-700 text-slate-300 border border-slate-600 px-2.5 py-0.5 rounded-full">
           {agentTypeLabel[item.decision_type] || item.decision_type}
         </span>
       </div>
-      <p className="text-sm font-semibold text-gray-900">{item.action}</p>
-      <p className="text-sm text-gray-600">{item.description}</p>
+      <p className="text-sm font-semibold text-white leading-snug">{item.action}</p>
+      <p className="text-sm text-slate-400 leading-relaxed">{item.description}</p>
       {modifyMode && (
         <textarea
           value={note}
           onChange={(e) => setNote(e.target.value)}
           rows={2}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 resize-none"
+          className="w-full px-3 py-2 border border-slate-600 bg-slate-900 text-white rounded-lg text-sm focus:ring-2 focus:ring-primary-500 resize-none placeholder-slate-500"
           placeholder="Add modification notes..."
         />
       )}
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex gap-2 flex-wrap pt-1">
         {!modifyMode ? (
           <>
             <button
               onClick={() => { onDecide(item.id, 'approve'); setDecided(true) }}
-              className="px-3 py-1.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
+              className="px-4 py-1.5 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white text-sm font-semibold rounded-lg hover:from-emerald-500 hover:to-emerald-400 transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-1.5"
             >
-              ✓ Accept & Execute
+              <CheckCircle className="h-3.5 w-3.5" /> Accept & Execute
             </button>
             <button
               onClick={() => setModifyMode(true)}
-              className="px-3 py-1.5 border border-blue-500 text-blue-600 text-sm font-medium rounded-lg hover:bg-blue-50 transition-colors"
+              className="px-4 py-1.5 border border-blue-500/40 text-blue-400 text-sm font-medium rounded-lg hover:bg-blue-500/10 transition-colors flex items-center gap-1.5"
             >
               ✎ Modify
             </button>
             <button
               onClick={() => { onDecide(item.id, 'reject'); setDecided(true) }}
-              className="px-3 py-1.5 border border-gray-300 text-gray-600 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
+              className="px-4 py-1.5 border border-slate-600 text-slate-400 text-sm font-medium rounded-lg hover:bg-slate-700 hover:text-slate-300 transition-colors"
             >
               ✕ Reject
             </button>
@@ -802,13 +1148,13 @@ function ApprovalItem({ item, onDecide }) {
           <>
             <button
               onClick={() => { onDecide(item.id, 'modify', note); setDecided(true) }}
-              className="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+              className="px-4 py-1.5 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-500 transition-colors"
             >
-              Submit
+              Submit Changes
             </button>
             <button
               onClick={() => setModifyMode(false)}
-              className="px-3 py-1.5 border border-gray-300 text-gray-600 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
+              className="px-4 py-1.5 border border-slate-600 text-slate-400 text-sm font-medium rounded-lg hover:bg-slate-700 transition-colors"
             >
               Cancel
             </button>

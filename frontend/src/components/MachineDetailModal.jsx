@@ -69,8 +69,8 @@ export default function MachineDetailModal({ isOpen, onClose, machine }) {
           {/* Header Info */}
           <div className="flex items-start justify-between">
             <div>
-              <h3 className="text-2xl font-bold text-gray-900">{machine.name}</h3>
-              <p className="text-sm text-gray-600 mt-1">
+              <h3 className="text-2xl font-bold text-white">{machine.name}</h3>
+              <p className="text-sm text-slate-400 mt-1">
                 {machine.type} • {machine.line}
               </p>
             </div>
@@ -101,16 +101,16 @@ export default function MachineDetailModal({ isOpen, onClose, machine }) {
 
           {/* 30-Day OEE Trend */}
           <div>
-            <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+            <h4 className="font-semibold text-white mb-3 flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-blue-600" />
               30-Day OEE Trend
             </h4>
             {oeeHistoryLoading ? (
-              <div className="flex justify-center items-center py-12 bg-gray-50 rounded-lg">
+              <div className="flex justify-center items-center py-12 bg-slate-800 rounded-lg">
                 <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
               </div>
             ) : (
-              <div className="h-72 bg-gray-50 rounded-lg p-4">
+              <div className="h-72 bg-slate-800 rounded-lg p-4">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                     <defs>
@@ -221,26 +221,26 @@ export default function MachineDetailModal({ isOpen, onClose, machine }) {
 
           {/* Utilization & Risk */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="p-4 border border-gray-200 rounded-lg">
+            <div className="p-4 border border-slate-800 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
                 <TrendingUp className="h-5 w-5 text-blue-600" />
-                <h4 className="font-semibold text-gray-900">Utilization</h4>
+                <h4 className="font-semibold text-white">Utilization</h4>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-bold text-gray-900">{machine.currentUtilization}%</span>
-                <span className="text-sm text-gray-600">of {machine.productionCapacity} units/day capacity</span>
+                <span className="text-2xl font-bold text-white">{machine.currentUtilization ?? machine.current_utilization ?? '—'}%</span>
+                <span className="text-sm text-slate-400">of {machine.productionCapacity ?? machine.production_capacity ?? '—'} units/day capacity</span>
               </div>
             </div>
-            <div className="p-4 border border-gray-200 rounded-lg">
+            <div className="p-4 border border-slate-800 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
                 <AlertTriangle className={`h-5 w-5 ${machine.failureRisk > 50 ? 'text-red-600' : machine.failureRisk > 25 ? 'text-yellow-600' : 'text-green-600'}`} />
-                <h4 className="font-semibold text-gray-900">Failure Risk</h4>
+                <h4 className="font-semibold text-white">Failure Risk</h4>
               </div>
               <div className="flex items-baseline gap-2">
                 <span className={`text-2xl font-bold ${machine.failureRisk > 50 ? 'text-red-600' : machine.failureRisk > 25 ? 'text-yellow-600' : 'text-green-600'}`}>
                   {machine.failureRisk}%
                 </span>
-                <span className="text-sm text-gray-600">probability</span>
+                <span className="text-sm text-slate-400">probability</span>
               </div>
             </div>
           </div>
@@ -248,7 +248,7 @@ export default function MachineDetailModal({ isOpen, onClose, machine }) {
           {/* Active Alarms */}
           {machine.alarms && machine.alarms.length > 0 && (
             <div>
-              <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+              <h4 className="font-semibold text-white mb-3 flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5 text-orange-600" />
                 Active Alarms ({machine.alarms.length})
               </h4>
@@ -265,8 +265,8 @@ export default function MachineDetailModal({ isOpen, onClose, machine }) {
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-900">{alarm.message}</p>
-                        <p className="text-xs text-gray-600 mt-1">{alarm.time}</p>
+                        <p className="text-sm font-medium text-white">{alarm.message}</p>
+                        <p className="text-xs text-slate-400 mt-1">{alarm.time}</p>
                       </div>
                       <Badge variant={
                         alarm.severity === 'critical' ? 'error' :
@@ -284,42 +284,42 @@ export default function MachineDetailModal({ isOpen, onClose, machine }) {
 
           {/* Maintenance Info */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="p-4 bg-gray-50 rounded-lg">
+            <div className="p-4 bg-slate-800 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
-                <Clock className="h-5 w-5 text-gray-600" />
-                <h5 className="font-semibold text-gray-900">Last Maintenance</h5>
+                <Clock className="h-5 w-5 text-slate-400" />
+                <h5 className="font-semibold text-white">Last Maintenance</h5>
               </div>
-              <p className="text-sm text-gray-700">{machine.lastMaintenance}</p>
+              <p className="text-sm text-slate-300">{machine.lastMaintenance}</p>
             </div>
-            <div className="p-4 bg-gray-50 rounded-lg">
+            <div className="p-4 bg-slate-800 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
-                <Clock className="h-5 w-5 text-gray-600" />
-                <h5 className="font-semibold text-gray-900">Next Scheduled</h5>
+                <Clock className="h-5 w-5 text-slate-400" />
+                <h5 className="font-semibold text-white">Next Scheduled</h5>
               </div>
-              <p className="text-sm text-gray-700">{machine.nextMaintenance}</p>
+              <p className="text-sm text-slate-300">{machine.nextMaintenance}</p>
             </div>
           </div>
 
           {/* Maintenance History */}
           {machine.maintenanceHistory && machine.maintenanceHistory.length > 0 && (
             <div>
-              <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+              <h4 className="font-semibold text-white mb-3 flex items-center gap-2">
                 <Wrench className="h-5 w-5 text-blue-600" />
                 Maintenance History
               </h4>
               <div className="space-y-2">
                 {machine.maintenanceHistory.map((entry, idx) => (
-                  <div key={idx} className="p-3 bg-gray-50 rounded-lg">
+                  <div key={idx} className="p-3 bg-slate-800 rounded-lg">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           <Badge variant={entry.type === 'Preventive' ? 'success' : entry.type === 'Corrective' ? 'warning' : 'error'}>
                             {entry.type}
                           </Badge>
-                          <span className="text-sm font-medium text-gray-900">{entry.date}</span>
+                          <span className="text-sm font-medium text-white">{entry.date}</span>
                         </div>
-                        <p className="text-sm text-gray-700 mt-1">{entry.notes}</p>
-                        <div className="flex items-center gap-4 mt-2 text-xs text-gray-600">
+                        <p className="text-sm text-slate-300 mt-1">{entry.notes}</p>
+                        <div className="flex items-center gap-4 mt-2 text-xs text-slate-400">
                           <span className="flex items-center gap-1">
                             <User className="h-3 w-3" />
                             {entry.technician}
@@ -340,26 +340,26 @@ export default function MachineDetailModal({ isOpen, onClose, machine }) {
           {/* Spare Parts Inventory */}
           {machine.spareParts && machine.spareParts.length > 0 && (
             <div>
-              <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+              <h4 className="font-semibold text-white mb-3 flex items-center gap-2">
                 <Package className="h-5 w-5 text-purple-600" />
                 Spare Parts Inventory
               </h4>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="text-left py-2 px-3 font-semibold text-gray-700">Part</th>
-                      <th className="text-right py-2 px-3 font-semibold text-gray-700">Stock</th>
-                      <th className="text-right py-2 px-3 font-semibold text-gray-700">Min Stock</th>
-                      <th className="text-center py-2 px-3 font-semibold text-gray-700">Status</th>
+                    <tr className="border-b border-slate-800">
+                      <th className="text-left py-2 px-3 font-semibold text-slate-300">Part</th>
+                      <th className="text-right py-2 px-3 font-semibold text-slate-300">Stock</th>
+                      <th className="text-right py-2 px-3 font-semibold text-slate-300">Min Stock</th>
+                      <th className="text-center py-2 px-3 font-semibold text-slate-300">Status</th>
                     </tr>
                   </thead>
                   <tbody>
                     {machine.spareParts.map((part, idx) => (
-                      <tr key={idx} className="border-b border-gray-100">
-                        <td className="py-2 px-3 text-gray-900">{part.part}</td>
-                        <td className="py-2 px-3 text-right text-gray-900">{part.stock}</td>
-                        <td className="py-2 px-3 text-right text-gray-900">{part.minStock}</td>
+                      <tr key={idx} className="border-b border-slate-800">
+                        <td className="py-2 px-3 text-white">{part.part}</td>
+                        <td className="py-2 px-3 text-right text-white">{part.stock}</td>
+                        <td className="py-2 px-3 text-right text-white">{part.minStock}</td>
                         <td className="py-2 px-3 text-center">
                           <Badge variant={
                             part.status === 'CRITICAL' ? 'error' :
@@ -378,10 +378,10 @@ export default function MachineDetailModal({ isOpen, onClose, machine }) {
           )}
 
           {/* Actions */}
-          <div className="flex gap-3 pt-4 border-t border-gray-200">
+          <div className="flex gap-3 pt-4 border-t border-slate-800">
             <button
               onClick={onClose}
-              className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+              className="flex-1 px-4 py-2.5 border border-slate-700 text-slate-300 rounded-lg font-medium hover:bg-slate-800 transition-colors"
             >
               Close
             </button>

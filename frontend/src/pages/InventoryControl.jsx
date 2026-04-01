@@ -106,20 +106,20 @@ export default function InventoryControl() {
       {/* Page Header with Product Selector */}
       <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Inventory Control</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-3xl font-bold text-white">Inventory Control</h1>
+          <p className="mt-1 text-sm text-slate-400">
             Stock levels, reorder points, and stockout risk analysis
           </p>
         </div>
         <div className="flex gap-4 items-end">
           <div className="w-64">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-slate-300 mb-2">
               Select Product
             </label>
             <select
               value={productId}
               onChange={(e) => setProductId(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white text-sm font-medium"
+              className="w-full px-4 py-2 border border-slate-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-slate-800 text-white text-sm font-medium"
             >
               {productsData?.map((product) => (
                 <option key={product.id} value={product.id}>
@@ -197,14 +197,14 @@ export default function InventoryControl() {
         <CardContent>
           <div className="flex items-end gap-4">
             <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-slate-300 mb-2">
                 Product ID
               </label>
               <input
                 type="text"
                 value={productId}
                 onChange={(e) => setProductId(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-4 py-2 border border-slate-700 bg-slate-800 text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 placeholder="e.g., PROD-A"
                 disabled={runInventoryAnalysis.isPending}
               />
@@ -262,14 +262,14 @@ export default function InventoryControl() {
               <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
             </div>
           ) : !historyData || historyData.length === 0 ? (
-            <p className="text-center text-gray-500 py-8">
+            <p className="text-center text-slate-400 py-8">
               No historical data available for {productId}
             </p>
           ) : (
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={historyData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
                   <XAxis
                     dataKey="date"
                     stroke="#6b7280"
@@ -294,8 +294,8 @@ export default function InventoryControl() {
                   />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: 'white',
-                      border: '1px solid #e5e7eb',
+                      backgroundColor: '#1e293b',
+                      border: '1px solid #334155',
                       borderRadius: '8px',
                       padding: '12px',
                     }}
@@ -371,7 +371,7 @@ export default function InventoryControl() {
               <InfoRow label="Safety Stock" value={`${formatNumber(safetyStock)} units`} />
               <InfoRow label="Reorder Point" value={`${formatNumber(reorderPoint)} units`} />
               <InfoRow label="Days of Supply" value={`${daysSupply} days`} />
-              <div className="pt-3 border-t border-gray-200">
+              <div className="pt-3 border-t border-slate-800">
                 <Badge variant={currentStock > safetyStock ? "success" : "danger"}>
                   {currentStock > safetyStock ? 'Above Safety Stock' : 'Below Safety Stock'}
                 </Badge>
@@ -401,7 +401,7 @@ export default function InventoryControl() {
                 value={daysUntilReorder > 0 ? `${daysUntilReorder} days` : 'Reorder Now!'}
                 status={daysUntilReorder > 3 ? "good" : "warning"}
               />
-              <div className="pt-3 border-t border-gray-200">
+              <div className="pt-3 border-t border-slate-800">
                 <Badge variant={stockoutRisk < 10 ? "success" : "warning"}>
                   {stockoutRisk < 10 ? 'Low Risk' : 'Monitoring Required'}
                 </Badge>
@@ -428,20 +428,20 @@ export default function InventoryControl() {
               <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
             </div>
           ) : !bomData || bomData.length === 0 ? (
-            <p className="text-center text-gray-500 py-8">
+            <p className="text-center text-slate-400 py-8">
               No BOM data available for {productId}
             </p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b-2 border-gray-200 bg-gray-50">
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Component</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Supplier</th>
-                    <th className="text-right py-3 px-4 font-semibold text-gray-700">Quantity Needed</th>
-                    <th className="text-right py-3 px-4 font-semibold text-gray-700">Current Stock</th>
-                    <th className="text-right py-3 px-4 font-semibold text-gray-700">Unit Cost</th>
-                    <th className="text-center py-3 px-4 font-semibold text-gray-700">Status</th>
+                  <tr className="border-b-2 border-slate-800 bg-slate-800">
+                    <th className="text-left py-3 px-4 font-semibold text-slate-300">Component</th>
+                    <th className="text-left py-3 px-4 font-semibold text-slate-300">Supplier</th>
+                    <th className="text-right py-3 px-4 font-semibold text-slate-300">Quantity Needed</th>
+                    <th className="text-right py-3 px-4 font-semibold text-slate-300">Current Stock</th>
+                    <th className="text-right py-3 px-4 font-semibold text-slate-300">Unit Cost</th>
+                    <th className="text-center py-3 px-4 font-semibold text-slate-300">Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -449,15 +449,15 @@ export default function InventoryControl() {
                     const stockStatus = item.current_stock >= item.quantity_needed * 2 ? 'good' :
                       item.current_stock >= item.quantity_needed ? 'warning' : 'danger'
                     return (
-                      <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
+                      <tr key={idx} className="border-b border-slate-800 hover:bg-slate-800">
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2">
-                            <Package className="h-4 w-4 text-gray-400" />
-                            <span className="font-medium text-gray-900">{item.component_id}</span>
+                            <Package className="h-4 w-4 text-slate-500" />
+                            <span className="font-medium text-white">{item.component_id}</span>
                           </div>
                         </td>
-                        <td className="py-3 px-4 text-gray-700">{item.supplier_name || 'N/A'}</td>
-                        <td className="py-3 px-4 text-right font-medium text-gray-900">
+                        <td className="py-3 px-4 text-slate-300">{item.supplier_name || 'N/A'}</td>
+                        <td className="py-3 px-4 text-right font-medium text-white">
                           {formatNumber(item.quantity_needed)}
                         </td>
                         <td className="py-3 px-4 text-right">
@@ -468,7 +468,7 @@ export default function InventoryControl() {
                             {formatNumber(item.current_stock)}
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-right text-gray-700">
+                        <td className="py-3 px-4 text-right text-slate-300">
                           {formatCurrency(item.unit_cost || 0)}
                         </td>
                         <td className="py-3 px-4 text-center">
@@ -486,11 +486,11 @@ export default function InventoryControl() {
                   })}
                 </tbody>
                 <tfoot>
-                  <tr className="border-t-2 border-gray-200 bg-gray-50 font-semibold">
-                    <td colSpan="4" className="py-3 px-4 text-right text-gray-700">
+                  <tr className="border-t-2 border-slate-800 bg-slate-800 font-semibold">
+                    <td colSpan="4" className="py-3 px-4 text-right text-slate-300">
                       Total BOM Cost:
                     </td>
-                    <td className="py-3 px-4 text-right text-gray-900">
+                    <td className="py-3 px-4 text-right text-white">
                       {formatCurrency(
                         bomData.reduce((sum, item) => sum + (item.quantity_needed * (item.unit_cost || 0)), 0)
                       )}
@@ -505,26 +505,26 @@ export default function InventoryControl() {
       </Card>
 
       {/* Recommendations */}
-      <Card className="border-blue-200 bg-blue-50">
+      <Card className="border-blue-500/20 bg-blue-500/8">
         <CardContent className="p-6">
-          <h3 className="text-lg font-semibold text-blue-900 mb-3">
+          <h3 className="text-lg font-semibold text-blue-400 mb-3">
             💡 AI Recommendations
           </h3>
-          <ul className="space-y-2 text-sm text-blue-800">
+          <ul className="space-y-2 text-sm text-slate-300">
             <li className="flex items-start gap-2">
-              <span className="text-blue-600 mt-1">✓</span>
+              <span className="text-emerald-400 mt-1">✓</span>
               <span>Current inventory position is adequate with 18.7 effective days of supply</span>
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-blue-600 mt-1">✓</span>
+              <span className="text-emerald-400 mt-1">✓</span>
               <span>Increase safety stock from 300 to 596 units (saves $26,419 annually)</span>
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-blue-600 mt-1">✓</span>
+              <span className="text-emerald-400 mt-1">✓</span>
               <span>Order 7,500 units over next 4 weeks ($383,500 total investment)</span>
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-yellow-600 mt-1">⚠</span>
+              <span className="text-amber-400 mt-1">⚠</span>
               <span>Monitor stockout risk closely - reaches 41.5% by day 14 without action</span>
             </li>
           </ul>
@@ -545,11 +545,11 @@ export default function InventoryControl() {
 
 function MetricCard({ icon: Icon, title, value, subtitle, color }) {
   const colorMap = {
-    blue: 'bg-blue-50 text-blue-600',
-    yellow: 'bg-yellow-50 text-yellow-600',
-    purple: 'bg-purple-50 text-purple-600',
-    orange: 'bg-orange-50 text-orange-600',
-    green: 'bg-green-50 text-green-600',
+    blue: 'bg-blue-500/15 text-blue-400',
+    yellow: 'bg-amber-500/15 text-amber-400',
+    purple: 'bg-violet-500/15 text-violet-400',
+    orange: 'bg-orange-500/15 text-orange-400',
+    green: 'bg-emerald-500/15 text-emerald-400',
   }
 
   return (
@@ -558,9 +558,9 @@ function MetricCard({ icon: Icon, title, value, subtitle, color }) {
         <div className={`p-2 rounded-lg ${colorMap[color]} w-fit mb-3`}>
           <Icon className="h-5 w-5" />
         </div>
-        <p className="text-sm font-medium text-gray-600 mb-1">{title}</p>
-        <p className="text-2xl font-bold text-gray-900">{value}</p>
-        <p className="text-sm text-gray-500 mt-1">{subtitle}</p>
+        <p className="text-sm font-medium text-slate-400 mb-1">{title}</p>
+        <p className="text-2xl font-bold text-white">{value}</p>
+        <p className="text-sm text-slate-500 mt-1">{subtitle}</p>
       </CardContent>
     </Card>
   )
@@ -569,11 +569,11 @@ function MetricCard({ icon: Icon, title, value, subtitle, color }) {
 function InfoRow({ label, value, status }) {
   return (
     <div className="flex justify-between items-center">
-      <span className="text-sm text-gray-600">{label}</span>
+      <span className="text-sm text-slate-400">{label}</span>
       <span className={`text-sm font-medium ${status === 'good' ? 'text-green-600' :
           status === 'warning' ? 'text-yellow-600' :
             status === 'danger' ? 'text-red-600' :
-              'text-gray-900'
+              'text-white'
         }`}>
         {value}
       </span>

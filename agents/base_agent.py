@@ -49,6 +49,7 @@ class BaseAgent:
             anthropic_api_key=ANTHROPIC_API_KEY,
             temperature=TEMPERATURE,
             max_tokens=MAX_TOKENS,
+            timeout=300,
         )
 
         self.tools = tools

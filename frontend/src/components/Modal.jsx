@@ -30,17 +30,17 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
                 transition={{ duration: 0.2 }}
-                className={`relative w-full ${sizeClasses[size]} bg-white rounded-xl shadow-2xl`}
+                className={`relative w-full ${sizeClasses[size]} bg-slate-900 rounded-xl shadow-2xl`}
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                  <h2 className="text-xl font-bold text-gray-900">{title}</h2>
+                <div className="flex items-center justify-between p-6 border-b border-slate-800">
+                  <h2 className="text-xl font-bold text-white">{title}</h2>
                   <button
                     onClick={onClose}
-                    className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                    className="p-2 rounded-lg hover:bg-slate-700 transition-colors"
                   >
-                    <X className="h-5 w-5 text-gray-500" />
+                    <X className="h-5 w-5 text-slate-500" />
                   </button>
                 </div>
 

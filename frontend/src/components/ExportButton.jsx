@@ -12,7 +12,7 @@ export default function ExportButton({ endpoint, filename, label = "Export CSV",
   return (
     <button
       onClick={handleExport}
-      className={`px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-2 ${className}`}
+      className={`px-4 py-2 border border-slate-700 text-slate-300 rounded-lg text-sm font-medium hover:bg-slate-800 transition-colors flex items-center gap-2 ${className}`}
     >
       <Download className="h-4 w-4" />
       {label}

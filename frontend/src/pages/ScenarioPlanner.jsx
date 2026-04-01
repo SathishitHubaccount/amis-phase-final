@@ -1,6 +1,8 @@
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Loader2, GitBranch, CheckCircle, TrendingUp, TrendingDown, Minus } from 'lucide-react'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import Card, { CardHeader, CardTitle, CardContent, CardDescription } from '../components/Card'
 import Badge from '../components/Badge'
 import { useNotificationStore } from '../store/notificationStore'
@@ -13,96 +15,6 @@ const quickScenarios = [
   'Raw material shortage',
 ]
 
-const baseState = {
-  demandPerWeek: 1050,
-  inventoryDays: 18.7,
-  oee: 87.3,
-  productionGap: -5,
-  riskLevel: 'Low',
-}
-
-function parseScenario(text) {
-  const lower = text.toLowerCase()
-
-  if ((lower.includes('supplier') || lower.includes('sup')) && lower.includes('delay')) {
-    return {
-      demandPerWeek: 1050,
-      inventoryDays: 12.4,
-      oee: 87.3,
-      productionGap: -105,
-      riskLevel: 'High',
-      recommendation: 'Expedite PO with SUP-001 for 3,500 units at premium freight (+$4,200). Activate safety stock drawdown protocol. Alert production scheduling for potential 2-week capacity reduction.',
-      highlights: [
-        'Lead time +7 days increases stockout risk by 25%',
-        'Safety stock will be breached within 6 days at current burn rate',
-        'Recommend activating secondary supplier SUP-003 immediately',
-      ],
-    }
-  }
-
-  if ((lower.includes('demand') || lower.includes('spike')) && (lower.includes('30') || lower.includes('%'))) {
-    return {
-      demandPerWeek: 1365,
-      inventoryDays: 10.2,
-      oee: 87.3,
-      productionGap: -315,
-      riskLevel: 'Critical',
-      recommendation: 'Authorize 20h overtime on Lines 1-3 for weeks 13-16. Increase supplier PO by 2,100 units/week. Adjust safety stock target to 700 units. Expected fulfillment impact: 3-4 week delay without action.',
-      highlights: [
-        'Demand spike of +315 units/week exceeds current capacity',
-        'Overtime authorization required within 48 hours',
-        'Supplier lead time may become bottleneck — dual-source activation advised',
-      ],
-    }
-  }
-
-  if (lower.includes('mch-002') || (lower.includes('machine') && lower.includes('down'))) {
-    return {
-      demandPerWeek: 1050,
-      inventoryDays: 16.8,
-      oee: 78.8,
-      productionGap: -57,
-      riskLevel: 'High',
-      recommendation: 'Reschedule 57 units/week to Line 3 and Line 4. Expedite MCH-002 bearing replacement (ETA 3 days). Implement predictive monitoring on MCH-003 as precaution. Estimated revenue risk: $28,500/week.',
-      highlights: [
-        'OEE drops 8.5% with MCH-002 offline',
-        'Production gap of 52 units/week requires rescheduling',
-        'Line 3 has 18% spare capacity available for absorption',
-      ],
-    }
-  }
-
-  if (lower.includes('shortage') || lower.includes('material')) {
-    return {
-      demandPerWeek: 1050,
-      inventoryDays: 14.7,
-      oee: 87.3,
-      productionGap: -80,
-      riskLevel: 'High',
-      recommendation: 'Activate dual-source procurement for affected components. Negotiate emergency allocation with SUP-001 (Priority Class A). Consider partial production run prioritizing highest-margin SKUs. Estimated cost increase: +12% on affected components.',
-      highlights: [
-        'Inventory days reduced by 4 due to component shortage',
-        'Component cost increases 12% under shortage conditions',
-        'Dual-source activation can restore 60% of affected supply within 5 days',
-      ],
-    }
-  }
-
-  return {
-    demandPerWeek: 1050,
-    inventoryDays: 17.2,
-    oee: 85.9,
-    productionGap: -20,
-    riskLevel: 'Medium',
-    recommendation: 'Monitor situation closely. Current buffers provide 3-5 day response window. Review safety stock levels and ensure supplier contingency plans are activated if conditions worsen.',
-    highlights: [
-      'Moderate impact detected based on scenario analysis',
-      'Current buffers provide adequate response time',
-      'Recommend increasing monitoring frequency',
-    ],
-  }
-}
-
 function DeltaValue({ current, base, suffix = '', lowerIsBetter = false }) {
   const delta = current - base
   const isPositive = delta > 0
@@ -113,20 +25,16 @@ function DeltaValue({ current, base, suffix = '', lowerIsBetter = false }) {
     return (
       <span className="inline-flex items-center gap-1 text-gray-500">
         <Minus className="h-3.5 w-3.5" />
-        <span>{current.toFixed(1)}{suffix}</span>
+        <span>{typeof current === 'number' ? current.toFixed(1) : current}{suffix}</span>
       </span>
     )
   }
 
   return (
     <span className={`inline-flex items-center gap-1 ${isBetter ? 'text-green-600' : 'text-red-600'}`}>
-      {isBetter ? (
-        <TrendingUp className="h-3.5 w-3.5" />
-      ) : (
-        <TrendingDown className="h-3.5 w-3.5" />
-      )}
-      <span>{current.toFixed(1)}{suffix}</span>
-      <span className="text-xs">({delta > 0 ? '+' : ''}{delta.toFixed(1)}{suffix})</span>
+      {isBetter ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
+      <span>{typeof current === 'number' ? current.toFixed(1) : current}{suffix}</span>
+      <span className="text-xs">({delta > 0 ? '+' : ''}{typeof delta === 'number' ? delta.toFixed(1) : delta}{suffix})</span>
     </span>
   )
 }
@@ -135,31 +43,50 @@ export default function ScenarioPlanner() {
   const [scenarioText, setScenarioText] = useState('')
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [results, setResults] = useState(null)
+  const [baseState, setBaseState] = useState(null)
   const [showSuccess, setShowSuccess] = useState(false)
   const [history, setHistory] = useState([])
+  const [error, setError] = useState(null)
 
   const addNotification = useNotificationStore((state) => state.addNotification)
+
+  // Load real base state from dashboard
+  const { data: dashData } = useQuery({
+    queryKey: ['dashboard'],
+    queryFn: () => apiClient.getDashboardSummary(),
+  })
 
   const handleAnalyze = async () => {
     if (!scenarioText.trim()) return
     setIsAnalyzing(true)
     setResults(null)
+    setError(null)
 
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-
-    const impact = parseScenario(scenarioText)
-    setResults(impact)
-    setIsAnalyzing(false)
-    setHistory((prev) => [
-      { text: scenarioText, timestamp: new Date().toISOString(), riskLevel: impact.riskLevel },
-      ...prev.slice(0, 2),
-    ])
+    try {
+      const res = await apiClient.analyzeScenario(scenarioText)
+      const data = res.data
+      setBaseState(data.base_state)
+      setResults({
+        projected: data.projected,
+        recommendation: data.recommendation,
+        highlights: data.highlights,
+        confidence: data.confidence,
+      })
+      setHistory((prev) => [
+        { text: scenarioText, timestamp: new Date().toISOString(), riskLevel: data.projected?.riskLevel || 'Medium' },
+        ...prev.slice(0, 2),
+      ])
+    } catch (err) {
+      setError(err?.response?.data?.detail || 'Analysis failed. Make sure the backend is running.')
+    } finally {
+      setIsAnalyzing(false)
+    }
   }
 
   const handleAcceptRecommendation = async () => {
     addNotification({
       title: 'Scenario Recommendation Accepted',
-      message: `Scenario "${scenarioText.slice(0, 60)}" — recommendation queued for execution`,
+      message: `"${scenarioText.slice(0, 60)}" — recommendation queued for execution`,
       category: 'pipeline',
       severity: 'info',
     })
@@ -181,24 +108,26 @@ export default function ScenarioPlanner() {
     setTimeout(() => setShowSuccess(false), 4000)
   }
 
-  const riskBadgeVariant = {
-    Low: 'success',
-    Medium: 'warning',
-    High: 'error',
-    Critical: 'error',
+  const riskBadgeVariant = { Low: 'success', Medium: 'warning', High: 'error', Critical: 'error' }
+
+  // Derive base state: prefer real API data, fall back to dashboard summary
+  const displayBase = baseState || {
+    demandPerWeek: parseInt((dashData?.data?.metrics?.demand?.value || '1050').replace(/,/g, '')) || 1050,
+    inventoryDays: parseFloat(dashData?.data?.metrics?.inventory?.value) || 14.0,
+    oee: parseFloat(dashData?.data?.metrics?.machines?.oee) || 85.0,
+    productionGap: dashData?.data?.metrics?.production?.gap || 0,
+    riskLevel: 'Low',
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-gray-900">What-If Scenario Planner</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Model disruptions and optimize decisions before they happen
+          Model disruptions and optimize decisions before they happen — powered by real factory data
         </p>
       </div>
 
-      {/* Success Toast */}
       <AnimatePresence>
         {showSuccess && (
           <motion.div
@@ -209,13 +138,12 @@ export default function ScenarioPlanner() {
           >
             <CheckCircle className="h-5 w-5 text-green-600 shrink-0" />
             <p className="text-sm font-medium text-green-800">
-              Recommendation accepted and added to the notification queue.
+              Recommendation accepted and saved to audit log.
             </p>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Scenario Input */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -223,7 +151,7 @@ export default function ScenarioPlanner() {
             Describe Your Scenario
           </CardTitle>
           <CardDescription>
-            Describe a disruption, constraint, or what-if situation to model its impact
+            Claude AI will analyze the impact using your real factory data
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -234,8 +162,6 @@ export default function ScenarioPlanner() {
             className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none mb-4"
             placeholder={`Examples:\n• "What if Supplier A delays by 2 weeks?"\n• "What if demand spikes +30% in weeks 13-16?"\n• "What if MCH-002 goes offline for maintenance?"`}
           />
-
-          {/* Quick Scenario Buttons */}
           <div className="flex flex-wrap gap-2 mb-4">
             {quickScenarios.map((scenario) => (
               <button
@@ -247,7 +173,9 @@ export default function ScenarioPlanner() {
               </button>
             ))}
           </div>
-
+          {error && (
+            <p className="text-sm text-red-600 mb-3 p-3 bg-red-50 rounded-lg border border-red-200">{error}</p>
+          )}
           <button
             onClick={handleAnalyze}
             disabled={isAnalyzing || !scenarioText.trim()}
@@ -256,7 +184,7 @@ export default function ScenarioPlanner() {
             {isAnalyzing ? (
               <>
                 <Loader2 className="h-5 w-5 animate-spin" />
-                Analyzing Scenario...
+                Analyzing with Claude AI...
               </>
             ) : (
               <>
@@ -268,7 +196,6 @@ export default function ScenarioPlanner() {
         </CardContent>
       </Card>
 
-      {/* Results */}
       <AnimatePresence>
         {results && (
           <motion.div
@@ -278,35 +205,34 @@ export default function ScenarioPlanner() {
             transition={{ duration: 0.5 }}
             className="space-y-4"
           >
-            {/* Side-by-side comparison */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Current State */}
               <Card className="border-gray-200">
                 <CardHeader>
                   <CardTitle className="text-base text-gray-700">Current State</CardTitle>
-                  <CardDescription>Baseline metrics before scenario</CardDescription>
+                  <CardDescription>Real baseline from your factory database</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3 text-sm">
                     <div className="flex justify-between">
                       <span className="text-gray-600">Demand/week</span>
-                      <span className="font-semibold text-gray-900">{baseState.demandPerWeek.toLocaleString()} units</span>
+                      <span className="font-semibold text-gray-900">{displayBase.demandPerWeek.toLocaleString()} units</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Inventory Days</span>
-                      <span className="font-semibold text-gray-900">{baseState.inventoryDays} days</span>
+                      <span className="font-semibold text-gray-900">{displayBase.inventoryDays} days</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">OEE</span>
-                      <span className="font-semibold text-gray-900">{baseState.oee}%</span>
+                      <span className="font-semibold text-gray-900">{displayBase.oee}%</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Production Gap</span>
-                      <span className="font-semibold text-gray-900">{baseState.productionGap} units/wk</span>
+                      <span className="font-semibold text-gray-900">{displayBase.productionGap} units/wk</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Risk Level</span>
-                      <Badge variant={riskBadgeVariant[baseState.riskLevel]}>{baseState.riskLevel}</Badge>
+                      <Badge variant={riskBadgeVariant[displayBase.riskLevel] || 'success'}>{displayBase.riskLevel}</Badge>
                     </div>
                   </div>
                 </CardContent>
@@ -316,45 +242,95 @@ export default function ScenarioPlanner() {
               <Card className="border-red-200 bg-red-50/30">
                 <CardHeader>
                   <CardTitle className="text-base text-red-700">Projected Impact</CardTitle>
-                  <CardDescription>After applying scenario</CardDescription>
+                  <CardDescription>AI analysis after applying scenario</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3 text-sm">
                     <div className="flex justify-between">
                       <span className="text-gray-600">Demand/week</span>
-                      <DeltaValue current={results.demandPerWeek} base={baseState.demandPerWeek} suffix=" units" />
+                      <DeltaValue current={results.projected.demandPerWeek} base={displayBase.demandPerWeek} suffix=" units" />
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Inventory Days</span>
-                      <DeltaValue current={results.inventoryDays} base={baseState.inventoryDays} suffix=" days" lowerIsBetter />
+                      <DeltaValue current={results.projected.inventoryDays} base={displayBase.inventoryDays} suffix=" days" lowerIsBetter />
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">OEE</span>
-                      <DeltaValue current={results.oee} base={baseState.oee} suffix="%" />
+                      <DeltaValue current={results.projected.oee} base={displayBase.oee} suffix="%" />
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Production Gap</span>
-                      <DeltaValue current={results.productionGap} base={baseState.productionGap} suffix=" units/wk" />
+                      <DeltaValue current={results.projected.productionGap} base={displayBase.productionGap} suffix=" units/wk" />
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Risk Level</span>
-                      <Badge variant={riskBadgeVariant[results.riskLevel]}>{results.riskLevel}</Badge>
+                      <Badge variant={riskBadgeVariant[results.projected.riskLevel] || 'warning'}>{results.projected.riskLevel}</Badge>
                     </div>
                   </div>
                 </CardContent>
               </Card>
             </div>
 
+            {/* Before / After Visual Comparison Chart */}
+            <Card className="border-gray-200">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-primary-600" />
+                  Impact Comparison
+                </CardTitle>
+                <CardDescription>Side-by-side view of current vs projected metrics</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={[
+                        {
+                          metric: 'Demand (÷10)',
+                          Current: Math.round(displayBase.demandPerWeek / 10),
+                          Projected: Math.round((results.projected.demandPerWeek || displayBase.demandPerWeek) / 10),
+                        },
+                        {
+                          metric: 'Inventory Days',
+                          Current: displayBase.inventoryDays,
+                          Projected: results.projected.inventoryDays || displayBase.inventoryDays,
+                        },
+                        {
+                          metric: 'OEE %',
+                          Current: displayBase.oee,
+                          Projected: results.projected.oee || displayBase.oee,
+                        },
+                        {
+                          metric: 'Prod Gap (÷10)',
+                          Current: Math.round(Math.abs(displayBase.productionGap || 0) / 10),
+                          Projected: Math.round(Math.abs(results.projected.productionGap || 0) / 10),
+                        },
+                      ]}
+                      margin={{ top: 10, right: 20, left: 0, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                      <XAxis dataKey="metric" tick={{ fontSize: 11 }} />
+                      <YAxis tick={{ fontSize: 11 }} />
+                      <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12 }} />
+                      <Legend wrapperStyle={{ fontSize: 12 }} />
+                      <Bar dataKey="Current" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                      <Bar dataKey="Projected" fill="#f59e0b" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* AI Recommendation */}
             <Card className="border-primary-200">
               <CardHeader>
                 <CardTitle className="flex items-center justify-between text-base">
                   <span>AI Recommendation</span>
-                  <Badge variant="success">89% confidence</Badge>
+                  <Badge variant="success">{Math.round((results.confidence || 0.85) * 100)}% confidence</Badge>
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {results.highlights && (
+                {results.highlights && results.highlights.length > 0 && (
                   <ul className="space-y-1 mb-4">
                     {results.highlights.map((h, idx) => (
                       <li key={idx} className="flex items-start gap-2 text-sm text-gray-700">
@@ -379,7 +355,6 @@ export default function ScenarioPlanner() {
         )}
       </AnimatePresence>
 
-      {/* Scenario History */}
       {history.length > 0 && (
         <Card>
           <CardHeader>
@@ -394,9 +369,7 @@ export default function ScenarioPlanner() {
                 >
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">{item.text}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      {new Date(item.timestamp).toLocaleString()}
-                    </p>
+                    <p className="text-xs text-gray-500 mt-0.5">{new Date(item.timestamp).toLocaleString()}</p>
                   </div>
                   <Badge variant={riskBadgeVariant[item.riskLevel] || 'default'} className="ml-3 shrink-0">
                     {item.riskLevel}

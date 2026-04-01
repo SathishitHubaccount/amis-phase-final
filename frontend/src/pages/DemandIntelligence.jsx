@@ -12,6 +12,8 @@ import { apiClient } from '../lib/api'
 export default function DemandIntelligence() {
   const [selectedProduct, setSelectedProduct] = useState('PROD-A')
   const [result, setResult] = useState(null)
+  const [isPolling, setIsPolling] = useState(false)
+  const [analysisError, setAnalysisError] = useState(null)
   const [showForecastModal, setShowForecastModal] = useState(false)
   const [aiForeccastData, setAIForecastData] = useState(null)
   const [isImporting, setIsImporting] = useState(false)
@@ -115,29 +117,46 @@ export default function DemandIntelligence() {
         `Provide complete demand intelligence analysis for ${selectedProduct} including forecast accuracy, trend analysis, scenario modeling, and demand-supply alignment recommendations`,
         selectedProduct
       ),
-    onSuccess: async (data) => {
-      const runId = data.data.run_id
-      pollForResult(runId)
+    onSuccess: (data) => {
+      setAnalysisError(null)
+      setIsPolling(true)
+      pollForResult(data.data.run_id)
+    },
+    onError: (err) => {
+      setAnalysisError(err?.response?.data?.detail || err.message || 'Failed to start analysis')
+      setIsPolling(false)
     },
   })
 
   const pollForResult = async (runId) => {
-    const maxAttempts = 60
+    const maxAttempts = 150  // 5 minutes (150 × 2s)
     let attempts = 0
     const poll = async () => {
       try {
         const response = await apiClient.getAgentRun(runId)
         const run = response.data
         if (run.status === 'completed') {
+          setIsPolling(false)
           setResult(run.result)
         } else if (run.status === 'failed') {
-          setResult(`Error: ${run.error}`)
+          setIsPolling(false)
+          setAnalysisError(run.error || 'Analysis failed')
         } else if (attempts < maxAttempts) {
           attempts++
           setTimeout(poll, 2000)
+        } else {
+          setIsPolling(false)
+          setAnalysisError('Analysis took too long. Please try again.')
         }
       } catch (error) {
-        console.error('Polling error:', error)
+        // Don't stop on transient network errors — keep polling
+        if (attempts < maxAttempts) {
+          attempts++
+          setTimeout(poll, 3000)
+        } else {
+          setIsPolling(false)
+          setAnalysisError('Lost connection to backend. Please try again.')
+        }
       }
     }
     poll()
@@ -148,8 +167,8 @@ export default function DemandIntelligence() {
       {/* Page Header */}
       <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Demand Intelligence</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-3xl font-bold text-white">Demand Intelligence</h1>
+          <p className="mt-1 text-sm text-slate-400">
             AI-powered demand forecasting and scenario analysis
           </p>
         </div>
@@ -157,7 +176,7 @@ export default function DemandIntelligence() {
           <select
             value={selectedProduct}
             onChange={(e) => setSelectedProduct(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white text-sm font-medium"
+            className="px-4 py-2 border border-slate-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-slate-800 text-white text-sm font-medium"
           >
             {products.length > 0 ? (
               products.map(product => (
@@ -204,16 +223,16 @@ export default function DemandIntelligence() {
             Get AI-powered demand forecasting insights and scenario recommendations
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-3">
           <button
-            onClick={() => runDemandAnalysis.mutate()}
-            disabled={runDemandAnalysis.isPending}
+            onClick={() => { setAnalysisError(null); setResult(null); runDemandAnalysis.mutate() }}
+            disabled={runDemandAnalysis.isPending || isPolling}
             className="px-6 py-2.5 bg-gradient-to-r from-primary-600 to-accent-600 text-white rounded-lg font-medium hover:from-primary-700 hover:to-accent-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all shadow-lg shadow-primary-500/30"
           >
-            {runDemandAnalysis.isPending ? (
+            {(runDemandAnalysis.isPending || isPolling) ? (
               <>
                 <Loader2 className="h-5 w-5 animate-spin" />
-                Analyzing Demand...
+                {runDemandAnalysis.isPending ? 'Starting...' : 'Analysing Demand...'}
               </>
             ) : (
               <>
@@ -222,6 +241,18 @@ export default function DemandIntelligence() {
               </>
             )}
           </button>
+          {isPolling && (
+            <p className="text-xs text-slate-400 flex items-center gap-2">
+              <Loader2 className="h-3 w-3 animate-spin text-primary-400" />
+              AI agent is running — this takes 20–40 seconds…
+            </p>
+          )}
+          {analysisError && (
+            <div className="flex items-center gap-2 text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              {analysisError}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -282,8 +313,8 @@ export default function DemandIntelligence() {
               </div>
             ) : forecastData.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-gray-500 mb-2">No forecast data for {selectedProductInfo.name}</p>
-                <p className="text-sm text-gray-400 mb-4">{selectedProductInfo.id}</p>
+                <p className="text-slate-400 mb-2">No forecast data for {selectedProductInfo.name}</p>
+                <p className="text-sm text-slate-500 mb-4">{selectedProductInfo.id}</p>
                 <button
                   onClick={() => setShowForecastModal(true)}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg flex items-center gap-2 mx-auto"
@@ -295,7 +326,7 @@ export default function DemandIntelligence() {
             ) : (
               <ResponsiveContainer width="100%" height={400}>
                 <AreaChart data={forecastData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
                   <XAxis
                     dataKey="forecast_date"
                     stroke="#6b7280"
@@ -309,8 +340,8 @@ export default function DemandIntelligence() {
                   <YAxis stroke="#6b7280" label={{ value: 'Units', angle: -90, position: 'insideLeft', style: { fontSize: 12, fill: '#9ca3af' } }} />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: 'white',
-                      border: '1px solid #e5e7eb',
+                      backgroundColor: '#1e293b',
+                      border: '1px solid #334155',
                       borderRadius: '8px',
                     }}
                     labelFormatter={(date) => {
@@ -329,7 +360,9 @@ export default function DemandIntelligence() {
                     dataKey="pessimistic"
                     stackId="1"
                     stroke="#ef4444"
-                    fill="#fee2e2"
+                    strokeWidth={2}
+                    fill="#ef4444"
+                    fillOpacity={0.12}
                     name="Conservative Scenario (25% prob)"
                   />
                   <Area
@@ -337,7 +370,9 @@ export default function DemandIntelligence() {
                     dataKey="base_case"
                     stackId="2"
                     stroke="#0ea5e9"
-                    fill="#dbeafe"
+                    strokeWidth={2.5}
+                    fill="#0ea5e9"
+                    fillOpacity={0.18}
                     name="Base Case Forecast (55% prob)"
                   />
                   <Area
@@ -345,7 +380,9 @@ export default function DemandIntelligence() {
                     dataKey="optimistic"
                     stackId="3"
                     stroke="#10b981"
-                    fill="#d1fae5"
+                    strokeWidth={2}
+                    fill="#10b981"
+                    fillOpacity={0.12}
                     name="Optimistic Scenario (20% prob)"
                   />
                   <Line
@@ -377,28 +414,28 @@ export default function DemandIntelligence() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <p className="text-sm font-medium text-blue-900 mb-2">
+                <div className="p-4 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                  <p className="text-sm font-medium text-blue-400 mb-2">
                     📊 Forecast Summary
                   </p>
-                  <div className="text-sm text-blue-800 space-y-1">
-                    <p><strong>{insights.forecastsEntered}</strong> weeks of forecast data entered</p>
-                    <p><strong>{insights.actualsRecorded}</strong> weeks with actual demand recorded</p>
-                    <p>Average base case: <strong>{insights.avgBase.toLocaleString()} units/week</strong></p>
+                  <div className="text-sm text-slate-300 space-y-1">
+                    <p><strong className="text-white">{insights.forecastsEntered}</strong> weeks of forecast data entered</p>
+                    <p><strong className="text-white">{insights.actualsRecorded}</strong> weeks with actual demand recorded</p>
+                    <p>Average base case: <strong className="text-white">{insights.avgBase.toLocaleString()} units/week</strong></p>
                     <p>Range: {insights.avgPessimistic.toLocaleString()} (conservative) to {insights.avgOptimistic.toLocaleString()} (optimistic)</p>
                   </div>
                 </div>
 
                 {insights.trend !== 0 && (
-                  <div className={`p-4 rounded-lg border ${insights.trend > 0 ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'}`}>
+                  <div className={`p-4 rounded-lg border ${insights.trend > 0 ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-amber-500/10 border-amber-500/20'}`}>
                     <div className="flex items-start gap-2">
-                      <TrendingUp className={`h-5 w-5 mt-0.5 ${insights.trend > 0 ? 'text-green-600' : 'text-yellow-600'}`} />
+                      <TrendingUp className={`h-5 w-5 mt-0.5 ${insights.trend > 0 ? 'text-emerald-400' : 'text-amber-400'}`} />
                       <div>
-                        <p className={`text-sm font-medium mb-2 ${insights.trend > 0 ? 'text-green-900' : 'text-yellow-900'}`}>
+                        <p className={`text-sm font-medium mb-1 ${insights.trend > 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
                           {insights.trendDirection} Trend Detected
                         </p>
-                        <p className={`text-sm ${insights.trend > 0 ? 'text-green-800' : 'text-yellow-800'}`}>
-                          Demand forecast shows a <strong>{insights.trendDirection.toLowerCase()}</strong> trend
+                        <p className="text-sm text-slate-300">
+                          Demand forecast shows a <strong className="text-white">{insights.trendDirection.toLowerCase()}</strong> trend
                           ({insights.trend > 0 ? '+' : ''}{insights.trendPercent}% per week).
                           {insights.trend > 0
                             ? ' Consider increasing production capacity or supplier orders to meet growing demand.'
@@ -410,14 +447,14 @@ export default function DemandIntelligence() {
                 )}
 
                 {insights.actualsRecorded === 0 && (
-                  <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
+                  <div className="p-4 bg-amber-500/10 rounded-lg border border-amber-500/20">
                     <div className="flex items-start gap-2">
-                      <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
+                      <AlertCircle className="h-5 w-5 text-amber-400 mt-0.5" />
                       <div>
-                        <p className="text-sm font-medium text-amber-900 mb-2">
+                        <p className="text-sm font-medium text-amber-400 mb-1">
                           Action Needed: Track Actual Demand
                         </p>
-                        <p className="text-sm text-amber-800">
+                        <p className="text-sm text-slate-300">
                           No actual demand data recorded yet. Once weeks pass, update forecasts with actual sales
                           to measure forecast accuracy and improve future predictions.
                         </p>
@@ -427,11 +464,11 @@ export default function DemandIntelligence() {
                 )}
 
                 {insights.actualsRecorded > 0 && (
-                  <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
-                    <p className="text-sm font-medium text-purple-900 mb-2">
+                  <div className="p-4 bg-violet-500/10 rounded-lg border border-violet-500/20">
+                    <p className="text-sm font-medium text-violet-400 mb-1">
                       ✅ Forecast Accuracy Tracking Active
                     </p>
-                    <p className="text-sm text-purple-800">
+                    <p className="text-sm text-slate-300">
                       {insights.actualsRecorded} weeks have actual demand recorded.
                       Continue tracking to calculate forecast accuracy (MAPE) and improve planning precision.
                     </p>
@@ -470,16 +507,16 @@ function MetricCard({ title, value, subtitle, trend, badge, delay }) {
             <TrendingUp className="h-5 w-5 text-primary-600" />
             {badge && <Badge variant="warning">{badge}</Badge>}
           </div>
-          <p className="text-sm font-medium text-gray-600 mb-1">{title}</p>
+          <p className="text-sm font-medium text-slate-400 mb-1">{title}</p>
           <div className="flex items-baseline gap-2">
-            <p className="text-2xl font-bold text-gray-900">{value}</p>
+            <p className="text-2xl font-bold text-white">{value}</p>
             {trend && (
               <span className="text-sm font-medium text-green-600 flex items-center gap-1">
                 {trend}
               </span>
             )}
           </div>
-          {subtitle && <p className="text-sm text-gray-500 mt-1">{subtitle}</p>}
+          {subtitle && <p className="text-sm text-slate-500 mt-1">{subtitle}</p>}
         </CardContent>
       </Card>
     </motion.div>

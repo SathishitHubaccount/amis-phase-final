@@ -71,3 +71,7 @@ backend.log
 
 # System status files
 SYSTEM_READY.txt
+
+# Zip uploads and temp extraction folders
+*.zip
+amis_v2/

@@ -6,11 +6,11 @@ export default function Badge({ children, variant = 'default', className, ...pro
       className={cn(
         'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
         {
-          'bg-gray-100 text-gray-800': variant === 'default',
-          'bg-green-100 text-green-800': variant === 'success',
-          'bg-yellow-100 text-yellow-800': variant === 'warning',
-          'bg-red-100 text-red-800': variant === 'error',
-          'bg-blue-100 text-blue-800': variant === 'info',
+          'bg-slate-800 text-slate-300': variant === 'default',
+          'bg-emerald-500/15 text-emerald-400 border border-emerald-500/25': variant === 'success',
+          'bg-amber-500/15 text-amber-400 border border-amber-500/25': variant === 'warning',
+          'bg-red-500/15 text-red-400 border border-red-500/25': variant === 'error',
+          'bg-blue-500/15 text-blue-400 border border-blue-500/25': variant === 'info',
         },
         className
       )}

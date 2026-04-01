@@ -3,6 +3,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { Factory, TrendingUp, Clock, Users, Play, Loader2, CheckCircle, AlertTriangle, Edit } from 'lucide-react'
+import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts'
 import Card, { CardHeader, CardTitle, CardContent, CardDescription } from '../components/Card'
 import Badge from '../components/Badge'
 import ExportButton from '../components/ExportButton'
@@ -131,19 +132,19 @@ export default function ProductionPlanning() {
       {/* Page Header with Product Selector */}
       <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Production Planning</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-3xl font-bold text-white">Production Planning</h1>
+          <p className="mt-1 text-sm text-slate-500">
             Master production schedule, capacity planning, and bottleneck analysis
           </p>
         </div>
         <div className="w-64">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-slate-300 mb-2">
             Select Product
           </label>
           <select
             value={productId}
             onChange={(e) => setProductId(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white text-sm font-medium"
+            className="w-full px-4 py-2 border border-slate-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-slate-900 text-sm font-medium"
           >
             {productsData?.map((product) => (
               <option key={product.id} value={product.id}>
@@ -247,7 +248,7 @@ export default function ProductionPlanning() {
         </CardHeader>
         <CardContent>
           {productionLines.length === 0 ? (
-            <p className="text-center text-gray-500 py-8">
+            <p className="text-center text-slate-500 py-8">
               No production lines assigned to {productId}
             </p>
           ) : (
@@ -267,30 +268,30 @@ export default function ProductionPlanning() {
         </CardHeader>
         <CardContent>
           {weeklySchedule.length === 0 ? (
-            <p className="text-center text-gray-500 py-8">
+            <p className="text-center text-slate-500 py-8">
               No production schedule for {productId}
             </p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Week</th>
-                    <th className="text-right py-3 px-4 font-semibold text-gray-700">Demand</th>
-                    <th className="text-right py-3 px-4 font-semibold text-gray-700">Planned</th>
-                    <th className="text-right py-3 px-4 font-semibold text-gray-700">Capacity</th>
-                    <th className="text-right py-3 px-4 font-semibold text-gray-700">Gap</th>
-                    <th className="text-right py-3 px-4 font-semibold text-gray-700">Overtime</th>
-                    <th className="text-center py-3 px-4 font-semibold text-gray-700">Edit</th>
+                  <tr className="border-b border-slate-800">
+                    <th className="text-left py-3 px-4 font-semibold text-slate-300">Week</th>
+                    <th className="text-right py-3 px-4 font-semibold text-slate-300">Demand</th>
+                    <th className="text-right py-3 px-4 font-semibold text-slate-300">Planned</th>
+                    <th className="text-right py-3 px-4 font-semibold text-slate-300">Capacity</th>
+                    <th className="text-right py-3 px-4 font-semibold text-slate-300">Gap</th>
+                    <th className="text-right py-3 px-4 font-semibold text-slate-300">Overtime</th>
+                    <th className="text-center py-3 px-4 font-semibold text-slate-300">Edit</th>
                   </tr>
                 </thead>
                 <tbody>
                   {weeklySchedule.map((week, idx) => (
-                    <tr key={week.id} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="py-3 px-4 font-medium text-gray-900">Week {week.week_number}</td>
-                      <td className="py-3 px-4 text-right text-gray-900">{formatNumber(week.demand)}</td>
-                      <td className="py-3 px-4 text-right text-gray-900">{formatNumber(week.planned_production)}</td>
-                      <td className="py-3 px-4 text-right text-gray-900">{formatNumber(week.capacity)}</td>
+                    <tr key={week.id} className="border-b border-slate-800/50 hover:bg-slate-800">
+                      <td className="py-3 px-4 font-medium text-white">Week {week.week_number}</td>
+                      <td className="py-3 px-4 text-right text-white">{formatNumber(week.demand)}</td>
+                      <td className="py-3 px-4 text-right text-white">{formatNumber(week.planned_production)}</td>
+                      <td className="py-3 px-4 text-right text-white">{formatNumber(week.capacity)}</td>
                       <td className={`py-3 px-4 text-right font-semibold ${week.gap < 0 ? 'text-red-600' : 'text-green-600'
                         }`}>
                         {week.gap > 0 ? '+' : ''}{formatNumber(week.gap)}
@@ -305,9 +306,9 @@ export default function ProductionPlanning() {
                       <td className="py-3 px-4 text-center">
                         <button
                           onClick={() => handleEditSchedule(week)}
-                          className="p-1 hover:bg-gray-100 rounded"
+                          className="p-1 hover:bg-slate-700 rounded"
                         >
-                          <Edit className="h-4 w-4 text-gray-600" />
+                          <Edit className="h-4 w-4 text-slate-400" />
                         </button>
                       </td>
                     </tr>
@@ -319,12 +320,58 @@ export default function ProductionPlanning() {
         </CardContent>
       </Card>
 
+      {/* Production Schedule Chart — Demand vs Capacity vs Planned */}
+      {weeklySchedule.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-blue-400" />
+              Production Schedule — Demand vs Capacity
+            </CardTitle>
+            <CardDescription>Weekly planned output vs available capacity vs customer demand</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart
+                  data={weeklySchedule.map(w => ({
+                    week: `Wk ${w.week_number}`,
+                    Planned: w.planned_production,
+                    Capacity: w.capacity,
+                    Demand: w.demand,
+                    gap: w.gap,
+                  }))}
+                  margin={{ top: 10, right: 20, left: 20, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                  <XAxis dataKey="week" tick={{ fontSize: 12 }} />
+                  <YAxis tick={{ fontSize: 12 }} tickFormatter={v => v.toLocaleString()} />
+                  <Tooltip
+                    formatter={(v, name) => [v.toLocaleString() + ' units', name]}
+                    contentStyle={{ borderRadius: 8, fontSize: 12 }}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  <Bar dataKey="Planned" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={50} />
+                  <Bar dataKey="Capacity" fill="#475569" radius={[4, 4, 0, 0]} maxBarSize={50} />
+                  <Line type="monotone" dataKey="Demand" stroke="#dc2626" strokeWidth={2.5} dot={{ fill: '#dc2626', r: 4 }} />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex items-center gap-6 mt-2 text-xs text-slate-500 justify-center">
+              <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-sm bg-blue-500 inline-block" /> Planned Production</span>
+              <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-sm bg-slate-500 inline-block" /> Available Capacity</span>
+              <span className="flex items-center gap-1.5"><span className="h-0.5 w-5 bg-red-500 inline-block" /> Customer Demand</span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Capacity Analysis - Dynamic */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Factory className="h-5 w-5 text-blue-600" />
+              <Factory className="h-5 w-5 text-blue-400" />
               Capacity Analysis
             </CardTitle>
           </CardHeader>
@@ -343,8 +390,8 @@ export default function ProductionPlanning() {
                 status={totalCapacityLoss > 0 ? 'warning' : 'good'}
               />
               {totalCapacityLoss > 0 && (
-                <div className="pt-3 border-t border-gray-200">
-                  <p className="text-sm text-gray-600">
+                <div className="pt-3 border-t border-slate-800">
+                  <p className="text-sm text-slate-400">
                     {productionLines.filter(l => l.status === 'maintenance').length} line(s) under maintenance
                   </p>
                 </div>
@@ -384,16 +431,16 @@ export default function ProductionPlanning() {
       </div>
 
       {/* Recommendations - Dynamic based on data */}
-      <Card className="border-blue-200 bg-blue-50">
+      <Card className="border-blue-500/20 bg-blue-500/10">
         <CardContent className="p-6">
-          <h3 className="text-lg font-semibold text-blue-900 mb-3 flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-blue-300 mb-3 flex items-center gap-2">
             <CheckCircle className="h-5 w-5" />
             Recommendations
           </h3>
-          <ul className="space-y-2 text-sm text-blue-800">
+          <ul className="space-y-2 text-sm text-blue-200">
             {totalOvertimeHours > 0 && (
               <li className="flex items-start gap-2">
-                <span className="text-blue-600 mt-1">✓</span>
+                <span className="text-blue-400 mt-1">✓</span>
                 <span>Schedule {Math.round(totalOvertimeHours)} hours of overtime over next 4 weeks to meet demand</span>
               </li>
             )}
@@ -405,7 +452,7 @@ export default function ProductionPlanning() {
             )}
             {productionLines.filter(l => l.status === 'maintenance').length > 0 && (
               <li className="flex items-start gap-2">
-                <span className="text-blue-600 mt-1">✓</span>
+                <span className="text-blue-400 mt-1">✓</span>
                 <span>
                   {productionLines.filter(l => l.status === 'maintenance').map(l => l.name).join(', ')} under maintenance -
                   will restore {formatNumber(totalCapacityLoss)} units/week capacity when complete
@@ -414,7 +461,7 @@ export default function ProductionPlanning() {
             )}
             {avgUtilization >= 85 && (
               <li className="flex items-start gap-2">
-                <span className="text-blue-600 mt-1">✓</span>
+                <span className="text-blue-400 mt-1">✓</span>
                 <span>High utilization ({avgUtilization}%) - consider adding capacity for growth</span>
               </li>
             )}
@@ -444,10 +491,10 @@ export default function ProductionPlanning() {
 
 function MetricCard({ icon: Icon, title, value, subtitle, color }) {
   const colorMap = {
-    blue: 'bg-blue-50 text-blue-600',
-    green: 'bg-green-50 text-green-600',
-    orange: 'bg-orange-50 text-orange-600',
-    red: 'bg-red-50 text-red-600',
+    blue: 'bg-blue-500/10 text-blue-400',
+    green: 'bg-emerald-500/10 text-emerald-400',
+    orange: 'bg-orange-500/10 text-orange-400',
+    red: 'bg-red-500/10 text-red-400',
   }
 
   return (
@@ -456,9 +503,9 @@ function MetricCard({ icon: Icon, title, value, subtitle, color }) {
         <div className={`p-2 rounded-lg ${colorMap[color]} w-fit mb-3`}>
           <Icon className="h-5 w-5" />
         </div>
-        <p className="text-sm font-medium text-gray-600 mb-1">{title}</p>
-        <p className="text-2xl font-bold text-gray-900">{value}</p>
-        <p className="text-sm text-gray-500 mt-1">{subtitle}</p>
+        <p className="text-sm font-medium text-slate-400 mb-1">{title}</p>
+        <p className="text-2xl font-bold text-white">{value}</p>
+        <p className="text-sm text-slate-500 mt-1">{subtitle}</p>
       </CardContent>
     </Card>
   )
@@ -473,21 +520,21 @@ function ProductionLineRow({ line }) {
   const config = statusConfig[line.status] || statusConfig.running
 
   return (
-    <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-gray-300 transition-all">
+    <div className="flex items-center justify-between p-4 border border-slate-800 rounded-lg hover:border-slate-700 transition-all">
       <div className="flex items-center gap-4 flex-1">
         <Factory className={`h-5 w-5 ${config.color}`} />
         <div>
-          <p className="font-medium text-gray-900">{line.name}</p>
-          <p className="text-sm text-gray-500">Product: {line.product_name || 'Not assigned'}</p>
+          <p className="font-medium text-white">{line.name}</p>
+          <p className="text-sm text-slate-500">Product: {line.product_name || 'Not assigned'}</p>
         </div>
       </div>
       <div className="flex items-center gap-6">
         <div className="text-right">
-          <p className="text-sm text-gray-600">Capacity</p>
-          <p className="font-semibold text-gray-900">{line.capacity_per_hour}/hr</p>
+          <p className="text-sm text-slate-400">Capacity</p>
+          <p className="font-semibold text-white">{line.capacity_per_hour}/hr</p>
         </div>
         <div className="text-right">
-          <p className="text-sm text-gray-600">Utilization</p>
+          <p className="text-sm text-slate-400">Utilization</p>
           <p className={`font-semibold ${line.utilization === 0 ? 'text-red-600' :
               line.utilization > 85 ? 'text-green-600' :
                 'text-yellow-600'
@@ -496,8 +543,8 @@ function ProductionLineRow({ line }) {
           </p>
         </div>
         <div className="text-right min-w-[100px]">
-          <p className="text-sm text-gray-600">Bottleneck</p>
-          <p className="text-xs text-gray-700">{line.bottleneck_machine_name || 'None'}</p>
+          <p className="text-sm text-slate-400">Bottleneck</p>
+          <p className="text-xs text-slate-300">{line.bottleneck_machine_name || 'None'}</p>
         </div>
         <Badge variant={config.badge} className="uppercase">
           {line.status}
@@ -510,10 +557,10 @@ function ProductionLineRow({ line }) {
 function InfoRow({ label, value, status }) {
   return (
     <div className="flex justify-between items-center">
-      <span className="text-sm text-gray-600">{label}</span>
+      <span className="text-sm text-slate-400">{label}</span>
       <span className={`text-sm font-medium ${status === 'good' ? 'text-green-600' :
           status === 'warning' ? 'text-orange-600' :
-            'text-gray-900'
+            'text-white'
         }`}>
         {value}
       </span>
@@ -531,10 +578,10 @@ function BottleneckItem({ machine, line, impact, status }) {
   const config = statusConfig[status] || statusConfig.active
 
   return (
-    <div className="flex items-start justify-between p-3 bg-gray-50 rounded-lg">
+    <div className="flex items-start justify-between p-3 bg-slate-800 rounded-lg">
       <div className="flex-1">
-        <p className="font-medium text-gray-900">{machine}</p>
-        <p className="text-sm text-gray-600 mt-1">{line} • {impact}</p>
+        <p className="font-medium text-white">{machine}</p>
+        <p className="text-sm text-slate-400 mt-1">{line} • {impact}</p>
       </div>
       <Badge variant={config.color === 'blue' ? 'info' : config.color === 'red' ? 'error' : 'warning'}>
         {config.label}

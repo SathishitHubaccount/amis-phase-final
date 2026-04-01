@@ -20,7 +20,7 @@ export default function DateRangePicker({ startDate, endDate, onStartChange, onE
 
   return (
     <div className={`space-y-3 ${className}`}>
-      <label className="block text-sm font-medium text-gray-700">
+      <label className="block text-sm font-medium text-slate-300">
         Date Range
       </label>
 
@@ -30,7 +30,7 @@ export default function DateRangePicker({ startDate, endDate, onStartChange, onE
           <button
             key={preset.label}
             onClick={() => applyPreset(preset.days)}
-            className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
+            className="px-3 py-1.5 text-xs font-medium text-slate-300 bg-slate-800 rounded-md hover:bg-slate-700 transition-colors"
           >
             {preset.label}
           </button>
@@ -40,27 +40,27 @@ export default function DateRangePicker({ startDate, endDate, onStartChange, onE
       {/* Custom Date Inputs */}
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs text-gray-600 mb-1">From</label>
+          <label className="block text-xs text-slate-400 mb-1">From</label>
           <div className="relative">
             <input
               type="date"
               value={startDate}
               onChange={(e) => onStartChange(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="w-full pl-9 pr-3 py-2 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             />
-            <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+            <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 pointer-events-none" />
           </div>
         </div>
         <div>
-          <label className="block text-xs text-gray-600 mb-1">To</label>
+          <label className="block text-xs text-slate-400 mb-1">To</label>
           <div className="relative">
             <input
               type="date"
               value={endDate}
               onChange={(e) => onEndChange(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="w-full pl-9 pr-3 py-2 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             />
-            <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+            <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 pointer-events-none" />
           </div>
         </div>
       </div>

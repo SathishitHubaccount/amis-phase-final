@@ -54,6 +54,11 @@ class AIDatabaseBridge:
         """
         from approval_system import get_approval_system
 
+        # Reset per-run state (bridge is a singleton — must clear between runs)
+        self.changes_made = []
+        self.warnings = []
+        self.errors = []
+
         product_id = pipeline_result.get("product_id")
         planning_weeks = pipeline_result.get("planning_horizon_weeks", 4)
         outputs = pipeline_result.get("pipeline_outputs", {})
@@ -66,31 +71,32 @@ class AIDatabaseBridge:
 
         # 1. Create decisions for demand forecasts (LOW RISK - auto-approve)
         if "demand" in outputs:
-            decision = self._create_forecast_decision(product_id, outputs["demand"], planning_weeks)
+            decision = create_forecast_decision(product_id, outputs["demand"], planning_weeks)
             decisions_created.append(decision)
             if auto_execute and decision.status.value == "auto_approved":
                 self._sync_demand_forecasts(product_id, outputs["demand"], planning_weeks)
 
         # 2. Create decisions for inventory updates (MEDIUM RISK - require approval)
         if "inventory" in outputs:
-            decision = self._create_inventory_decision(product_id, outputs["inventory"])
+            decision = create_inventory_decision(product_id, outputs["inventory"])
             decisions_created.append(decision)
             if auto_execute and decision.status.value == "auto_approved":
                 self._sync_inventory_data(product_id, outputs["inventory"])
 
         # 3. Create decisions for production schedule (HIGH RISK - require approval)
         if "production" in outputs:
-            decision = self._create_production_decision(product_id, outputs["production"], planning_weeks)
+            decision = create_production_decision(product_id, outputs["production"], planning_weeks)
             decisions_created.append(decision)
             if auto_execute and decision.status.value == "auto_approved":
                 self._sync_production_schedule(product_id, outputs["production"], planning_weeks)
 
         # 4. Create decisions for machine maintenance (HIGH RISK - require approval)
         if "machine_health" in outputs:
-            decision = self._create_maintenance_decision(outputs["machine_health"])
-            decisions_created.append(decision)
-            if auto_execute and decision.status.value == "auto_approved":
-                self._sync_machine_actions(outputs["machine_health"])
+            decision = create_maintenance_decision(outputs["machine_health"])
+            if decision is not None:
+                decisions_created.append(decision)
+                if auto_execute and decision.status.value == "auto_approved":
+                    self._sync_machine_actions(outputs["machine_health"])
 
         # 5. Create audit log entry
         self._create_audit_log(product_id, pipeline_result)
@@ -114,11 +120,16 @@ class AIDatabaseBridge:
         print("\n📊 [1/4] Syncing Demand Forecasts...")
 
         try:
-            # Extract scenario data
+            # Extract scenario data — prefer weekly_forecast lists for per-week variation
             scenarios = demand_output.get("scenarios", {})
-            base_weekly = scenarios.get("base", {}).get("weekly_avg", 0)
-            optimistic_weekly = scenarios.get("optimistic", {}).get("weekly_avg", 0)
-            pessimistic_weekly = scenarios.get("pessimistic", {}).get("weekly_avg", 0)
+            base_list = scenarios.get("base", {}).get("weekly_forecast", [])
+            opt_list = scenarios.get("optimistic", {}).get("weekly_forecast", [])
+            pess_list = scenarios.get("pessimistic", {}).get("weekly_forecast", [])
+
+            # Fallback to flat weekly_avg if lists are absent
+            base_avg = scenarios.get("base", {}).get("weekly_avg", 0)
+            opt_avg = scenarios.get("optimistic", {}).get("weekly_avg", 0)
+            pess_avg = scenarios.get("pessimistic", {}).get("weekly_avg", 0)
 
             # Clear existing forecasts for this product (avoid duplicates)
             conn = get_db_connection()
@@ -126,21 +137,25 @@ class AIDatabaseBridge:
             cursor.execute("DELETE FROM demand_forecasts WHERE product_id = ?", (product_id,))
             conn.commit()
 
-            # Create forecasts for next N weeks
+            # Create forecasts for next N weeks using per-week values where available
             today = datetime.now()
             created_count = 0
 
             for week_num in range(1, weeks + 1):
                 week_date = today + timedelta(days=week_num * 7)
+                idx = week_num - 1
+                base_val = base_list[idx] if idx < len(base_list) else base_avg
+                opt_val = opt_list[idx] if idx < len(opt_list) else opt_avg
+                pess_val = pess_list[idx] if idx < len(pess_list) else pess_avg
 
                 forecast_id = create_demand_forecast(
                     product_id=product_id,
                     week_number=week_num,
                     forecast_data={
                         "forecast_date": week_date.strftime("%Y-%m-%d"),
-                        "base_case": base_weekly,
-                        "optimistic": optimistic_weekly,
-                        "pessimistic": pessimistic_weekly,
+                        "base_case": base_val,
+                        "optimistic": opt_val,
+                        "pessimistic": pess_val,
                         "actual": None
                     }
                 )

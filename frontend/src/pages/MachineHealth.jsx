@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { Cog, AlertTriangle, Activity, Wrench, Play, Loader2, CheckCircle, Download, Filter } from 'lucide-react'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import Card, { CardHeader, CardTitle, CardContent, CardDescription } from '../components/Card'
 import Badge from '../components/Badge'
 import ProductSelector from '../components/ProductSelector'
@@ -11,6 +12,31 @@ import WorkOrderModal from '../components/WorkOrderModal'
 import ExportButton from '../components/ExportButton'
 import RecommendationCard from '../components/RecommendationCard'
 import { apiClient } from '../lib/api'
+
+function OEEGauge({ value }) {
+  const radius = 20
+  const circumference = 2 * Math.PI * radius
+  const offset = circumference * (1 - value / 100)
+  const color = value >= 85 ? '#16a34a' : value >= 70 ? '#ca8a04' : '#dc2626'
+  return (
+    <div className="relative flex-shrink-0" style={{ width: 52, height: 52 }}>
+      <svg width="52" height="52" className="transform -rotate-90">
+        <circle cx="26" cy="26" r={radius} stroke="#1e293b" strokeWidth="6" fill="none" />
+        <circle
+          cx="26" cy="26" r={radius}
+          stroke={color} strokeWidth="6" fill="none"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          strokeLinecap="round"
+          style={{ transition: 'stroke-dashoffset 0.8s ease' }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="text-xs font-bold leading-none" style={{ color }}>{value}%</span>
+      </div>
+    </div>
+  )
+}
 
 export default function MachineHealth() {
   const [selectedProduct, setSelectedProduct] = useState('PROD-A')
@@ -122,15 +148,15 @@ export default function MachineHealth() {
       {/* Page Header with Actions */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Machine Health</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-3xl font-bold text-white">Machine Health</h1>
+          <p className="mt-1 text-sm text-slate-400">
             Fleet monitoring, predictive maintenance, and OEE analysis
           </p>
         </div>
         <div className="flex gap-3">
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors flex items-center gap-2"
+            className="px-4 py-2 border border-slate-700 text-slate-300 rounded-lg font-medium hover:bg-slate-800 transition-colors flex items-center gap-2"
           >
             <Filter className="h-4 w-4" />
             {showFilters ? 'Hide' : 'Show'} Filters
@@ -256,7 +282,7 @@ export default function MachineHealth() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Fleet Status - {selectedProduct}</CardTitle>
-            <p className="text-sm text-gray-500">Click any machine for detailed view</p>
+            <p className="text-sm text-slate-400">Click any machine for detailed view</p>
           </div>
         </CardHeader>
         <CardContent>
@@ -265,7 +291,7 @@ export default function MachineHealth() {
               <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
             </div>
           ) : productMachines.length === 0 ? (
-            <p className="text-center text-gray-500 py-8">
+            <p className="text-center text-slate-400 py-8">
               No machines assigned to {selectedProduct}
             </p>
           ) : (
@@ -283,11 +309,60 @@ export default function MachineHealth() {
         </CardContent>
       </Card>
 
+      {/* Predictive Failure Risk Timeline */}
+      {productMachines.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5 text-red-500" />
+              Predictive Failure Risk Timeline
+            </CardTitle>
+            <CardDescription>Current failure probability per machine — click a machine row above for 30-day OEE history</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  layout="vertical"
+                  data={[...productMachines]
+                    .sort((a, b) => b.failureRisk - a.failureRisk)
+                    .map(m => ({ name: m.id, risk: m.failureRisk, label: m.name }))}
+                  margin={{ top: 5, right: 40, left: 70, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" horizontal={false} />
+                  <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11 }} tickFormatter={v => `${v}%`} />
+                  <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={65} />
+                  <Tooltip
+                    formatter={(v, _, props) => [`${v}% failure risk`, props.payload.label]}
+                    contentStyle={{ borderRadius: 8, fontSize: 12 }}
+                  />
+                  <Bar dataKey="risk" radius={[0, 6, 6, 0]} maxBarSize={28}>
+                    {[...productMachines]
+                      .sort((a, b) => b.failureRisk - a.failureRisk)
+                      .map((m) => (
+                        <Cell
+                          key={m.id}
+                          fill={m.failureRisk >= 50 ? '#dc2626' : m.failureRisk >= 20 ? '#f59e0b' : '#16a34a'}
+                        />
+                      ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex items-center gap-6 mt-3 justify-center text-xs text-slate-500">
+              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-green-600 inline-block" /> Low (&lt;20%)</span>
+              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-amber-400 inline-block" /> Medium (20–50%)</span>
+              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-red-600 inline-block" /> High (&gt;50%)</span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Critical Alerts */}
       {productMachines.some(m => m.alarms && m.alarms.length > 0) && (
-        <Card className="border-orange-200 bg-orange-50">
+        <Card className="border-orange-500/20 bg-orange-500/10">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-orange-900">
+            <CardTitle className="flex items-center gap-2 text-orange-300">
               <AlertTriangle className="h-5 w-5" />
               Critical Alerts
             </CardTitle>
@@ -331,11 +406,11 @@ export default function MachineHealth() {
 
 function MetricCard({ icon: Icon, title, value, subtitle, color }) {
   const colorMap = {
-    blue: 'bg-blue-50 text-blue-600',
-    green: 'bg-green-50 text-green-600',
-    orange: 'bg-orange-50 text-orange-600',
-    red: 'bg-red-50 text-red-600',
-    yellow: 'bg-yellow-50 text-yellow-600',
+    blue: 'bg-blue-500/10 text-blue-400',
+    green: 'bg-emerald-500/10 text-emerald-400',
+    orange: 'bg-orange-500/10 text-orange-400',
+    red: 'bg-red-500/10 text-red-400',
+    yellow: 'bg-amber-500/10 text-amber-400',
   }
 
   return (
@@ -344,9 +419,9 @@ function MetricCard({ icon: Icon, title, value, subtitle, color }) {
         <div className={`p-2 rounded-lg ${colorMap[color]} w-fit mb-3`}>
           <Icon className="h-5 w-5" />
         </div>
-        <p className="text-sm font-medium text-gray-600 mb-1">{title}</p>
-        <p className="text-2xl font-bold text-gray-900">{value}</p>
-        <p className="text-sm text-gray-500 mt-1">{subtitle}</p>
+        <p className="text-sm font-medium text-slate-400 mb-1">{title}</p>
+        <p className="text-2xl font-bold text-white">{value}</p>
+        <p className="text-sm text-slate-500 mt-1">{subtitle}</p>
       </CardContent>
     </Card>
   )
@@ -362,26 +437,21 @@ function MachineRow({ machine, onClick, onCreateWorkOrder }) {
   const config = statusConfig[machine.status]
 
   return (
-    <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-primary-300 hover:shadow-md transition-all cursor-pointer group">
+    <div className="flex items-center justify-between p-4 border border-slate-800 rounded-lg hover:border-slate-600 hover:shadow-md transition-all cursor-pointer group">
       <div className="flex items-center gap-4 flex-1" onClick={onClick}>
         <Cog className={`h-5 w-5 ${config.color} group-hover:scale-110 transition-transform`} />
         <div>
-          <p className="font-medium text-gray-900 group-hover:text-primary-600 transition-colors">{machine.name}</p>
-          <p className="text-sm text-gray-500">{machine.id} • {machine.line}</p>
+          <p className="font-medium text-white group-hover:text-primary-400 transition-colors">{machine.name}</p>
+          <p className="text-sm text-slate-500">{machine.id} • {machine.line}</p>
         </div>
       </div>
       <div className="flex items-center gap-6">
-        <div className="text-right" onClick={onClick}>
-          <p className="text-sm text-gray-600">OEE</p>
-          <p className={`text-lg font-semibold ${machine.oee >= 85 ? 'text-green-600' :
-              machine.oee >= 70 ? 'text-yellow-600' :
-                'text-red-600'
-            }`}>
-            {machine.oee}%
-          </p>
+        <div className="flex flex-col items-center cursor-pointer" onClick={onClick}>
+          <p className="text-xs text-slate-400 mb-1">OEE</p>
+          <OEEGauge value={machine.oee} />
         </div>
         <div className="text-right" onClick={onClick}>
-          <p className="text-sm text-gray-600">Failure Risk</p>
+          <p className="text-sm text-slate-400">Failure Risk</p>
           <p className={`text-lg font-semibold ${machine.failureRisk < 20 ? 'text-green-600' :
               machine.failureRisk < 50 ? 'text-yellow-600' :
                 'text-red-600'
@@ -397,7 +467,7 @@ function MachineRow({ machine, onClick, onCreateWorkOrder }) {
             e.stopPropagation()
             onCreateWorkOrder()
           }}
-          className="px-3 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-2 opacity-0 group-hover:opacity-100"
+          className="px-3 py-2 border border-slate-700 text-slate-300 rounded-lg text-sm font-medium hover:bg-slate-800 transition-colors flex items-center gap-2 opacity-0 group-hover:opacity-100"
         >
           <Wrench className="h-4 w-4" />
           Work Order
@@ -411,16 +481,16 @@ function AlertItem({ machine, alarm, onClick }) {
   return (
     <div
       onClick={onClick}
-      className={`p-3 rounded-lg border-l-4 cursor-pointer hover:shadow-md transition-all ${alarm.severity === 'critical' ? 'bg-red-50 border-red-500' :
-          alarm.severity === 'high' ? 'bg-orange-50 border-orange-500' :
-            alarm.severity === 'medium' ? 'bg-yellow-50 border-yellow-500' :
-              'bg-blue-50 border-blue-500'
+      className={`p-3 rounded-lg border-l-4 cursor-pointer hover:shadow-md transition-all ${alarm.severity === 'critical' ? 'bg-red-500/10 border-red-500/50' :
+          alarm.severity === 'high' ? 'bg-orange-500/10 border-orange-500/50' :
+            alarm.severity === 'medium' ? 'bg-amber-500/10 border-amber-500/50' :
+              'bg-blue-500/10 border-blue-500/50'
         }`}
     >
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <span className="font-semibold text-gray-900">{machine.name}</span>
+            <span className="font-semibold text-white">{machine.name}</span>
             <Badge variant={
               alarm.severity === 'critical' ? 'error' :
                 alarm.severity === 'high' ? 'warning' :
@@ -429,8 +499,8 @@ function AlertItem({ machine, alarm, onClick }) {
               {alarm.severity.toUpperCase()}
             </Badge>
           </div>
-          <p className="text-sm text-gray-700 mt-1">{alarm.message}</p>
-          <p className="text-xs text-gray-600 mt-1">{alarm.time}</p>
+          <p className="text-sm text-slate-300 mt-1">{alarm.message}</p>
+          <p className="text-xs text-slate-400 mt-1">{alarm.time}</p>
         </div>
       </div>
     </div>

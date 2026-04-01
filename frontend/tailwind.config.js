@@ -31,11 +31,17 @@ export default {
           800: '#86198f',
           900: '#701a75',
         },
+        // Ensure slate-950 is available (Tailwind v3.3+)
+        slate: {
+          925: '#0d1526',
+          950: '#020817',
+        },
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-in',
         'slide-up': 'slideUp 0.5s ease-out',
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'glow': 'glow 2s ease-in-out infinite alternate',
       },
       keyframes: {
         fadeIn: {
@@ -46,6 +52,13 @@ export default {
           '0%': { transform: 'translateY(10px)', opacity: '0' },
           '100%': { transform: 'translateY(0)', opacity: '1' },
         },
+        glow: {
+          '0%': { boxShadow: '0 0 5px rgb(139 92 246 / 0.3)' },
+          '100%': { boxShadow: '0 0 20px rgb(139 92 246 / 0.6)' },
+        },
+      },
+      backgroundImage: {
+        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
       },
     },
   },
