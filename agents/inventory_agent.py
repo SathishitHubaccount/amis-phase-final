@@ -65,28 +65,29 @@ class InventoryManagementAgent(BaseAgent):
         })
         plan = json.loads(plan_json)
 
-        current = inv["current_inventory"]
-        health = inv["health_indicators"]
+        current = inv.get("current_inventory", {})
+        health = inv.get("health_indicators", {})
+        plan_summary = plan.get("plan_summary", {})
 
         return {
             "source_agent": "inventory_management",
             "product_id": product_id,
             "planning_horizon_weeks": planning_weeks,
-            "current_stock": current["current_stock"],
-            "safety_stock": current["safety_stock"],
-            "days_of_supply": health["days_of_supply"],
-            "effective_days_of_supply": health["effective_days_of_supply"],
-            "above_safety_stock": health["above_safety_stock"],
-            "incoming_pipeline_units": health["incoming_pipeline_units"],
-            "warehouse_utilization_pct": current["warehouse_utilization_pct"],
-            "stockout_probability_pct": risk["overall_stockout_probability_pct"],
-            "reorder_needed_now": rop["reorder_needed_now"],
-            "reorder_point_units": rop["reorder_point_units"],
-            "days_until_rop": rop["days_until_rop_reached"],
-            "total_units_to_order": plan["plan_summary"]["total_units_ordered"],
-            "total_procurement_cost": plan["plan_summary"]["total_procurement_cost"],
-            "min_projected_stock": plan["plan_summary"]["min_projected_stock"],
-            "weeks_below_safety_stock": plan["plan_summary"]["weeks_below_safety_stock"],
-            "stockout_events_last_12m": health["stockout_events_last_12_months"],
-            "annual_stockout_cost": health["total_stockout_revenue_lost"],
+            "current_stock": current.get("current_stock", 0),
+            "safety_stock": current.get("safety_stock", 0),
+            "days_of_supply": health.get("days_of_supply", 0),
+            "effective_days_of_supply": health.get("effective_days_of_supply", 0),
+            "above_safety_stock": health.get("above_safety_stock", False),
+            "incoming_pipeline_units": health.get("incoming_pipeline_units", 0),
+            "warehouse_utilization_pct": current.get("warehouse_utilization_pct", 0),
+            "stockout_probability_pct": risk.get("overall_stockout_probability_pct", 0),
+            "reorder_needed_now": rop.get("reorder_needed_now", False),
+            "reorder_point_units": rop.get("reorder_point_units", 0),
+            "days_until_rop": rop.get("days_until_rop_reached", 0),
+            "total_units_to_order": plan_summary.get("total_units_ordered", 0),
+            "total_procurement_cost": plan_summary.get("total_procurement_cost", 0),
+            "min_projected_stock": plan_summary.get("min_projected_stock", 0),
+            "weeks_below_safety_stock": plan_summary.get("weeks_below_safety_stock", 0),
+            "stockout_events_last_12m": health.get("stockout_events_last_12_months", 0),
+            "annual_stockout_cost": health.get("total_stockout_revenue_lost", 0),
         }
