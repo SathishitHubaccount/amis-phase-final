@@ -23,7 +23,10 @@ export function formatPercent(num, decimals = 1) {
 }
 
 export function formatDate(dateString) {
-  return new Date(dateString).toLocaleString('en-US', {
+  if (!dateString) return '—'
+  // Backend stores UTC without 'Z' suffix — append it so JS converts to local time correctly
+  const utcString = dateString.endsWith('Z') || dateString.includes('+') ? dateString : dateString + 'Z'
+  return new Date(utcString).toLocaleString('en-US', {
     month: 'short',
     day: 'numeric',
     hour: '2-digit',

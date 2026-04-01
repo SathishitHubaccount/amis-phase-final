@@ -104,6 +104,36 @@ export const apiClient = {
   getPendingApprovals: () => api.get('/api/approvals/pending'),
   decideApproval: (decisionId, action, approvedBy = 'Manager', notes = null) =>
     api.post(`/api/approvals/${decisionId}/decide`, { action, approved_by: approvedBy, notes }),
+
+  // Notifications
+  getNotifications: (limit = 50) => api.get('/api/notifications', { params: { limit } }),
+  createNotification: (title, message, category = 'system', severity = 'info') =>
+    api.post('/api/notifications', { title, message, category, severity }),
+  markNotificationRead: (id) => api.patch(`/api/notifications/${id}/read`),
+  markAllNotificationsRead: () => api.patch('/api/notifications/read-all'),
+  dismissNotification: (id) => api.delete(`/api/notifications/${id}`),
+
+  // Scenario Planner
+  analyzeScenario: (scenarioText, productId = 'PROD-A') =>
+    api.post('/api/scenario/analyze', { scenario_text: scenarioText, product_id: productId }),
+
+  // Agent Negotiation
+  runNegotiation: (scenarioType, productId = 'PROD-A', customerOrder = 2000, timelineDays = 3) =>
+    api.post('/api/negotiation/run', {
+      scenario_type: scenarioType,
+      product_id: productId,
+      customer_order: customerOrder,
+      timeline_days: timelineDays,
+    }),
+
+  // Dashboard Trends (7-day sparklines)
+  getDashboardTrends: () => api.get('/api/dashboard/trends'),
+
+  // Dashboard ROI (real computed from decisions + work orders)
+  getDashboardROI: () => api.get('/api/dashboard/roi'),
+
+  // Observability — agent runs, pipeline traces, activity log
+  getObservability: () => api.get('/api/observability'),
 }
 
 export default api
