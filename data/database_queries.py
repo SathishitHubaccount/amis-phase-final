@@ -392,6 +392,7 @@ def get_product_info(product_id: str = "PROD-A") -> Dict:
 
     prod_id, name, lead_time, unit_cost = row
 
+    unit_cost = unit_cost or 52.30
     unit_price = 89.50
     margin_pct = round(((unit_price - unit_cost) / unit_price) * 100, 1)
 
