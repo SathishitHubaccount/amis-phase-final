@@ -527,7 +527,7 @@ async def get_dashboard_summary():
             ) sub
         """)
         _demand_row = _cur.fetchone()
-        total_demand = round(_demand_row['avg_demand']) if _demand_row and _demand_row['avg_demand'] else 0
+        total_demand = round(_demand_row['avg_demand']) if _demand_row and _demand_row['avg_demand'] is not None else 1050
 
         # Production capacity from production_lines (operational lines, 8hr shift)
         _cur.execute("SELECT capacity_per_hour, utilization FROM production_lines WHERE status='operational'")
@@ -678,7 +678,8 @@ async def get_dashboard_trends():
     import random
 
     machines = get_all_machines()
-    current_oee = (sum(m['oee'] for m in machines) / len(machines) * 100) if machines else 85.0
+    raw_oee = sum(m['oee'] for m in machines) / len(machines) if machines else 0.85
+    current_oee = round(raw_oee * 100 if raw_oee <= 1 else raw_oee, 1)
 
     products = get_all_products()
     inv = get_inventory(products[0]['id']) if products else {}
@@ -1526,11 +1527,8 @@ async def analyze_scenario(request: ScenarioRequest):
         }
 
         # --- Build context summary for Claude ---
-        critical_machines = [
-            m["id"] for m in machines
-            if (m.get("failure_risk", 0) * 100 if m.get("failure_risk", 0) < 1
-                else m.get("failure_risk", 0)) > 40
-        ]
+        _fr = lambda m: m.get("failure_risk", 0) * 100 if m.get("failure_risk", 0) <= 1 else m.get("failure_risk", 0)
+        critical_machines = [m["id"] for m in machines if _fr(m) > 40]
         low_stock = [
             inv["product_id"] for inv in all_inv
             if inv.get("current_stock", 0) < inv.get("reorder_point", 0)

@@ -78,7 +78,7 @@ class ProductionPlanningAgent(BaseAgent):
             "lines_active": context["capacity_summary"]["active_lines"],
             "lines_down": context["capacity_summary"]["down_lines"],
             "overtime_required": mps["mps_summary"]["total_overtime_and_contract_cost"] > 0,
-            "material_requirements": requirements["material_requirements"],
-            "procurement_alerts": requirements["procurement_summary"]["component_alerts"],
-            "cross_agent_output_for_supplier": requirements["cross_agent_output_for_supplier"],
+            "material_requirements": requirements.get("material_requirements", []),
+            "procurement_alerts": (requirements.get("procurement_summary") or {}).get("component_alerts", []),
+            "cross_agent_output_for_supplier": requirements.get("cross_agent_output_for_supplier", {}),
         }

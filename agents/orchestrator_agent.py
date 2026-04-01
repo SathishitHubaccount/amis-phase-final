@@ -226,10 +226,10 @@ class OrchestratorAgent(BaseAgent):
                 {"order": 5, "name": "generate_maintenance_schedule",
                  "desc": f"Scheduled {len(mach.get('maintenance_windows', []))} maintenance window(s) to minimize production downtime"},
                 {"order": 6, "name": "assess_production_capacity_impact",
-                 "desc": f"Capacity ceiling set to {_ceiling_wk:,} units/week after risk buffer" if isinstance(_ceiling_wk, (int, float)) else "Assessed capacity constraints from machine health"},
+                 "desc": f"Capacity ceiling set to {int(_ceiling_wk):,} units/week after risk buffer" if isinstance(_ceiling_wk, (int, float)) else "Assessed capacity constraints from machine health"},
             ],
             "key_findings": [
-                {"label": "Capacity Ceiling",   "value": f"{_ceiling_wk:,} units/week" if isinstance(_ceiling_wk, (int, float)) else str(_ceiling_wk)},
+                {"label": "Capacity Ceiling",   "value": f"{int(_ceiling_wk):,} units/week" if isinstance(_ceiling_wk, (int, float)) else str(_ceiling_wk)},
                 {"label": "Fleet Avg OEE",      "value": f"{_fleet.get('average_oee_pct', '—')}%"},
                 {"label": "High-Risk Machines", "value": str(len(_at_risk)) + (" ⚠" if _at_risk else "")},
                 {"label": "Capacity Risk",      "value": "Yes ⚠" if mach.get("capacity_risk_flag") else "No"},
