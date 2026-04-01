@@ -227,8 +227,20 @@ def get_anomaly_weeks(product_id: str = "PROD-A") -> List[Dict]:
 
 
 # For backward compatibility, create aliases with original names
-get_historical_demand = get_historical_demand_from_db
-get_market_context = get_market_context_from_db
+# Falls back to sample_data if the database table is empty
+def get_historical_demand(product_id: str = "PROD-A", weeks: int = 12) -> List[Dict]:
+    result = get_historical_demand_from_db(product_id, weeks)
+    if not result:
+        from data.sample_data import get_historical_demand as _fallback
+        return _fallback(product_id, weeks)
+    return result
+
+def get_market_context() -> Dict:
+    result = get_market_context_from_db()
+    if not result:
+        from data.sample_data import get_market_context as _fallback
+        return _fallback()
+    return result
 
 
 # ══════════════════════════════════════════════════════════════════
