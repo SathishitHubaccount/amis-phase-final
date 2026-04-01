@@ -30,16 +30,20 @@ def simulate_demand_scenarios(product_id: str = "PROD-A", horizon_weeks: int = 4
         horizon_weeks: Number of weeks to forecast ahead (default: 4)
     """
     historical = get_historical_demand(product_id)
-    
+
+    if not historical:
+        from data.sample_data import get_historical_demand as _fallback
+        historical = _fallback(product_id)
+
     # Calculate trend from historical data
     demands = [w["demand_units"] for w in historical]
     n = len(demands)
     avg_demand = sum(demands) / n
-    recent_avg = sum(demands[-4:]) / 4
-    trend_pct = ((recent_avg - avg_demand) / avg_demand) * 100
-    
+    recent_avg = sum(demands[-4:]) / 4 if len(demands) >= 4 else sum(demands) / n
+    trend_pct = ((recent_avg - avg_demand) / avg_demand) * 100 if avg_demand else 0
+
     # Detect if there's a recent spike
-    last_week = demands[-1]
+    last_week = demands[-1] if demands else avg_demand
     spike_detected = last_week > avg_demand * 1.3
     
     # Calculate volatility (standard deviation)

@@ -63,7 +63,7 @@ def get_inventory_status(product_id: str = "PROD-A") -> str:
             "incoming_pipeline_units": incoming_total,
             "effective_days_of_supply": round(
                 (inventory["current_stock"] + incoming_total) / inventory["avg_daily_consumption"], 1
-            ),
+            ) if inventory.get("avg_daily_consumption") else 0,
             "warehouse_utilization_pct": warehouse["total_utilization_pct"],
             "stockout_events_last_12_months": len(stockouts),
             "total_stockout_revenue_lost": sum(s["revenue_lost"] for s in stockouts),
@@ -509,6 +509,8 @@ def generate_replenishment_plan(
     # Safety stock target
     daily_demand = expected_weekly_demand / 7
     daily_std = demand_std_dev_weekly / math.sqrt(7)
+    if not suppliers:
+        return json.dumps({"error": "No supplier data available for replenishment planning."})
     avg_lt = suppliers[0]["avg_lead_time_days"]  # Use primary supplier lead time
     lt_std = suppliers[0]["lead_time_std_dev_days"]
     target_safety_stock = round(z * math.sqrt(
@@ -517,7 +519,7 @@ def generate_replenishment_plan(
 
     # Supplier allocation: 65% Supplier A (reliable), 35% Supplier B (cheaper)
     sup_a = suppliers[0]
-    sup_b = suppliers[1]
+    sup_b = suppliers[1] if len(suppliers) > 1 else suppliers[0]
     split_a = 0.65
     split_b = 0.35
 

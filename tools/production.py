@@ -77,7 +77,7 @@ def get_production_context(product_id: str = "PROD-A") -> str:
             "theoretical_max_units_per_week": theoretical_weekly,
             "current_effective_units_per_day": effective_daily,
             "current_effective_units_per_week": effective_weekly,
-            "capacity_loss_pct": round((1 - effective_daily / theoretical_daily) * 100, 1),
+            "capacity_loss_pct": round((1 - effective_daily / theoretical_daily) * 100, 1) if theoretical_daily else 0,
             "active_lines": len(active_lines),
             "down_lines": len(down_lines),
             "degraded_lines_on_warning": len(warning_lines),
@@ -358,6 +358,8 @@ def analyze_production_bottlenecks() -> str:
     # Rank by capacity lost (most impactful bottleneck first)
     line_analysis.sort(key=lambda x: x["capacity_lost_per_week"], reverse=True)
 
+    if not line_analysis:
+        return json.dumps({"error": "No production line data available for bottleneck analysis."})
     # Primary bottleneck
     bottleneck = line_analysis[0]
 

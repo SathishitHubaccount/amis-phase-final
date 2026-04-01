@@ -101,7 +101,7 @@ def get_machine_fleet_status(plant_id: str = "PLANT-01") -> str:
             "down": len(down),
             "on_warning": len(warning),
             "on_caution": len(caution),
-            "fleet_health_avg_score": round(sum(m["health_score"] for m in fleet) / len(fleet), 1),
+            "fleet_health_avg_score": round(sum(m["health_score"] for m in fleet) / len(fleet), 1) if fleet else 0,
         },
         "production_capacity": {
             "theoretical_max_units_per_day": max_capacity,
@@ -109,7 +109,7 @@ def get_machine_fleet_status(plant_id: str = "PLANT-01") -> str:
             "effective_capacity_after_degradation_units_per_day": effective_capacity,
             "capacity_lost_to_downtime_units_per_day": max_capacity - current_capacity,
             "capacity_lost_to_degradation_units_per_day": round(capacity_reduction),
-            "total_capacity_loss_pct": round((1 - effective_capacity / max_capacity) * 100, 1),
+            "total_capacity_loss_pct": round((1 - effective_capacity / max_capacity) * 100, 1) if max_capacity else 0,
         },
         "active_alerts": alerts,
         "machines": machine_summary,
