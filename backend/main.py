@@ -809,7 +809,7 @@ def _normalize_machine(m: dict) -> dict:
         ui_status = "healthy"
     return {
         **m,
-        "oee": round(m.get("oee", 0) * 100, 1),
+        "oee": round(m.get("oee", 0) * 100 if m.get("oee", 0) <= 1 else m.get("oee", 0), 1),
         "availability": round(m.get("availability", 0) * 100, 1),
         "performance": round(m.get("performance", 0) * 100, 1),
         "quality": round(m.get("quality", 0) * 100, 1),
@@ -1552,10 +1552,8 @@ async def analyze_scenario(request: ScenarioRequest):
                 total_demand += sched[0].get("demand", 0)
                 total_planned += sched[0].get("planned_production", 0)
 
-        avg_oee = (
-            sum(m.get("oee", 0.85) for m in machines) / len(machines) * 100
-            if machines else 85.0
-        )
+        _raw_oee = sum(m.get("oee", 0.85) for m in machines) / len(machines) if machines else 0.85
+        avg_oee = round(_raw_oee * 100 if _raw_oee <= 1 else _raw_oee, 1)
         avg_days_supply = (
             sum(
                 inv.get("current_stock", 0) / max(inv.get("avg_daily_usage", 1), 1)
